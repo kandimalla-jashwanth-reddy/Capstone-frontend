@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - CrowdCivics</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-card">
+            <h2>Create Account</h2>
+            <p class="subtitle">Join CrowdCivics today - OTP Verification Required</p>
+            
+            <form id="registrationForm">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-with-button">
+                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                        <button type="button" id="sendOtpBtn" class="btn-secondary">Send OTP</button>
+                    </div>
+                    <small style="color: #666; font-size: 12px;">We'll send a 6-digit OTP to verify your email</small>
+                </div>
+                
+                <div class="form-group" id="otpGroup" style="display: none;">
+                    <label for="otp">Enter OTP</label>
+                    <input type="text" id="otp" name="otp" placeholder="Enter 6-digit OTP" maxlength="6" required 
+                           pattern="[0-9]{6}" title="Please enter exactly 6 digits">
+                    <small style="color: #666; font-size: 12px;">Check your email for the OTP code</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Create a password" required 
+                           minlength="6">
+                </div>
+                
+                <button type="submit" class="btn-primary" id="registerBtn" disabled>Create Account</button>
+            </form>
+            
+            <div class="links">
+                <p>Already have an account? <a href="login.html">Sign in here</a></p>
+            </div>
+            
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
