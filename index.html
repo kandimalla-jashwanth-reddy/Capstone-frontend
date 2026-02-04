@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrowdCivics - Civic Issue Reporting</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .landing-page {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        .landing-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+        .brand-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+        }
+        .brand-subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        .landing-nav a {
+            margin-left: 12px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 14px;
+            text-decoration: none;
+        }
+        .nav-login {
+            border: 1px solid #667eea;
+            color: #667eea;
+            background: white;
+        }
+        .nav-register {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        .landing-content {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 32px;
+        }
+        .landing-hero h1 {
+            font-size: 32px;
+            margin-bottom: 12px;
+            color: #222;
+        }
+        .landing-hero p {
+            color: #555;
+            margin-bottom: 20px;
+        }
+        .landing-bullets li {
+            margin-bottom: 8px;
+            color: #444;
+            font-size: 14px;
+        }
+        .cta-buttons {
+            margin-top: 20px;
+        }
+        .cta-buttons a {
+            text-decoration: none;
+        }
+        .landing-secondary {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .landing-secondary h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .landing-secondary p {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .landing-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #e0ebff;
+            color: #1a3d8f;
+            font-size: 11px;
+            margin-bottom: 10px;
+        }
+        @media (max-width: 900px) {
+            .landing-content {
+                grid-template-columns: 1fr;
+            }
+            .landing-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .landing-page {
+                padding: 24px 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="landing-page">
+            <header class="landing-header">
+                <div>
+                    <div class="brand-title">CrowdCivics</div>
+                    <div class="brand-subtitle">Crowdsourced civic issue reporting for smarter cities</div>
+                </div>
+                <nav class="landing-nav">
+                    <a href="login.html" class="nav-login">Sign In</a>
+                    <a href="register.html" class="nav-register">Create Account</a>
+                </nav>
+            </header>
+
+            <main class="landing-content">
+                <section class="landing-hero">
+                    <h1>See an issue in your city? Report it in seconds.</h1>
+                    <p>
+                        CrowdCivics lets residents capture potholes, broken streetlights, overflowing bins
+                        and more using a simple, mobile-first interface. Your reports go straight to the
+                        right municipal department for faster action.
+                    </p>
+                    <ul class="landing-bullets">
+                        <li>📍 Automatic location tagging for every report</li>
+                        <li>📷 Attach photos for better context</li>
+                        <li>📊 Track the status of your reports from submission to resolution</li>
+                        <li>🗺️ City dashboard helps staff prioritize hotspots and bottlenecks</li>
+                    </ul>
+                    <div class="cta-buttons">
+                        <a href="register.html">
+                            <button class="btn-primary" type="button">Get Started – Create an Account</button>
+                        </a>
+                    </div>
+                </section>
+
+                <aside class="landing-secondary">
+                    <span class="landing-tag">For Municipal Staff</span>
+                    <h3>Administrative Dashboard</h3>
+                    <p>
+                        Filter issues by category, location, or priority. Assign items to the correct
+                        department and monitor response times through a live analytics view.
+                    </p>
+                    <p>
+                        To experience the full workflow, sign in with a test account, submit an issue,
+                        and see it appear on your personal dashboard.
+                    </p>
+                    <p style="font-size:12px;color:#777;margin-top:8px;">
+                        Note: This academic prototype focuses on citizen reporting, automated routing, and
+                        basic analytics rather than full production-scale infrastructure.
+                    </p>
+                </aside>
+            </main>
+        </div>
+    </div>
+
+    <!-- Simple in-app chatbot widget -->
+    <div class="chat-widget">
+        <button id="chatToggle" class="chat-toggle">Chat</button>
+        <div id="chatWindow" class="chat-window" aria-hidden="true">
+            <div class="chat-header">
+                <span>CrowdCivics Assistant</span>
+                <button id="chatClose" class="chat-close">&times;</button>
+            </div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <form id="chatForm" class="chat-form">
+                <input
+                    id="chatInput"
+                    type="text"
+                    class="chat-input"
+                    placeholder="Ask how to report an issue..."
+                    autocomplete="off"
+                />
+                <button type="submit" class="chat-send">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

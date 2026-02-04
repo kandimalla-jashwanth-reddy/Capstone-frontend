@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civic Issue Reporter - CrowdCivics</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <div class="dashboard-header">
+                <div>
+                    <h1>Civic Issue Reporter</h1>
+                    <p class="subtitle">Welcome, <span id="userName">Citizen</span>. Choose an option from the header.</p>
+                </div>
+                <nav class="header-nav">
+                    <a href="#newIssueSection" class="nav-link">Report Issue</a>
+                    <a href="#myReportsSection" class="nav-link">My Reports</a>
+                    <a href="#analyticsSection" class="nav-link">City Overview</a>
+                    <a href="profile.html" class="nav-link">Profile</a>
+                    <button id="logoutBtn" class="btn-secondary">Logout</button>
+                </nav>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card" id="newIssueSection">
+                    <h2>Report a New Issue</h2>
+                    <form id="issueForm">
+                        <div class="form-group">
+                            <label for="issueTitle">Title</label>
+                            <input type="text" id="issueTitle" name="title" placeholder="Short title (e.g., Pothole on Main Street)" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="issueDescription">Description</label>
+                            <textarea id="issueDescription" name="description" placeholder="Describe the issue in detail" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="issueCategory">Category</label>
+                            <select id="issueCategory" name="category" required>
+                                <option value="">Select category</option>
+                                <option value="POTHOLE">Pothole / Road Damage</option>
+                                <option value="STREETLIGHT">Streetlight / Electrical</option>
+                                <option value="TRASH">Garbage / Trash Bin</option>
+                                <option value="WATER">Water / Sewer</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="issuePriority">Priority</label>
+                            <select id="issuePriority" name="priority">
+                                <option value="LOW">Low</option>
+                                <option value="MEDIUM" selected>Medium</option>
+                                <option value="HIGH">High</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Location</label>
+                            <div class="location-row">
+                                <button type="button" id="useLocationBtn" class="btn-secondary">Use My Location</button>
+                                <div class="location-coordinates">
+                                    <span id="locationText">No location selected</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="latitude" name="latitude">
+                            <input type="hidden" id="longitude" name="longitude">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="issueAddress">Address (optional)</label>
+                            <input type="text" id="issueAddress" name="address" placeholder="Enter address or landmark (optional)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="issuePhoto">Photo (optional)</label>
+                            <input type="file" id="issuePhoto" name="photo" accept="image/*" capture="environment">
+                            <small style="color:#666;font-size:12px;">Attach a clear photo of the issue if possible.</small>
+                        </div>
+
+                        <button type="submit" class="btn-primary">Submit Issue</button>
+                    </form>
+                </div>
+
+                <div class="card" id="myReportsSection">
+                    <h2>Your Recent Reports</h2>
+                    <div id="issueList" class="issue-list">
+                        <!-- Issues will be rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="analyticsSection">
+                <h2>Citywide Overview</h2>
+                <div id="analyticsSummary" class="analytics-grid">
+                    <!-- Analytics summary will be rendered here -->
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Debug Info (for development)</h3>
+                <div id="debugText" class="info-card debug-info">
+                    Initializing...
+                </div>
+            </div>
+
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <!-- Simple in-app chatbot widget -->
+    <div class="chat-widget">
+        <button id="chatToggle" class="chat-toggle">Chat</button>
+        <div id="chatWindow" class="chat-window" aria-hidden="true">
+            <div class="chat-header">
+                <span>CrowdCivics Assistant</span>
+                <button id="chatClose" class="chat-close">&times;</button>
+            </div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <form id="chatForm" class="chat-form">
+                <input
+                    id="chatInput"
+                    type="text"
+                    class="chat-input"
+                    placeholder="Ask about issues, status, help..."
+                    autocomplete="off"
+                />
+                <button type="submit" class="chat-send">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
+
