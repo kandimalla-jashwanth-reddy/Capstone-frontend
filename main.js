@@ -6,7 +6,7 @@ function showMessage(message, type = 'info') {
         messageDiv.textContent = message;
         messageDiv.className = `message ${type}`;
         messageDiv.style.display = 'block';
-        
+
         if (type === 'success') {
             setTimeout(() => {
                 messageDiv.style.display = 'none';
@@ -28,11 +28,11 @@ function startOTPTimer(button, duration = 60) {
     let timeLeft = duration;
     const originalText = button.textContent;
     button.disabled = true;
-    
+
     const timer = setInterval(() => {
         button.textContent = `Resend OTP (${timeLeft}s)`;
         timeLeft--;
-        
+
         if (timeLeft < 0) {
             clearInterval(timer);
             button.disabled = false;
@@ -41,7 +41,7 @@ function startOTPTimer(button, duration = 60) {
     }, 1000);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('Page loaded - testing backend connection...');
 
     fetch(`${API_BASE}/auth/test`)
@@ -54,13 +54,10 @@ document.addEventListener('DOMContentLoaded', function() {
             showMessage('Backend connection failed. Make sure server is running on port 8080.', 'error');
         });
 
-    // Initialize forgot password page (if relevant)
     initializeForgotPassword();
 
-    // Initialize issue reporting dashboard (if relevant)
     initializeIssueDashboard();
 
-    // Initialize chatbot widget (if present on page)
     initializeChatBot();
 });
 
@@ -68,229 +65,189 @@ function initializeForgotPassword() {
     const resetForm = document.getElementById('passwordResetForm');
     if (resetForm) {
         console.log('Forgot password page detected - initializing...');
-        
-        let otpSent = false;
-        const resetBtn = document.getElementById('resetBtn');
-        const otpGroup = document.getElementById('otpGroup');
-        const passwordGroup = document.getElementById('passwordGroup');
-        
-        resetForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            console.log('Forgot password form submitted');
-            
-            const email = document.getElementById('email').value.trim();
-            const otp = document.getElementById('otp') ? document.getElementById('otp').value.trim() : '';
-            const newPassword = document.getElementById('newPassword') ? document.getElementById('newPassword').value : '';
-            
-            console.log('Form data:', { 
-                email, 
-                otp, 
-                newPassword: newPassword ? '***' : 'not set', 
-                otpSent 
-            });
-            
-            // Basic validation
-            if (!email) {
-                showMessage('Please enter your email address', 'error');
-                return;
-            }
-            
-            if (!isValidEmail(email)) {
-                showMessage('Please enter a valid email address', 'error');
-                return;
-            }
 
-            try {
-                if (!otpSent) {
-                    // STEP 1: Send OTP
-                    console.log('Step 1: Sending OTP to', email);
-                    showMessage('Sending OTP...', 'info');
-                    resetBtn.disabled = true;
-                    resetBtn.textContent = 'Sending OTP...';
-                    
+        const sendResetOtpBtn = document.getElementById('sendResetOtpBtn');
+        const phoneInput = document.getElementById('resetPhone');
+        const resetOtpGroup = document.getElementById('resetOtpGroup');
+        const resetPasswordGroup = document.getElementById('resetPasswordGroup');
+        const resetBtn = document.getElementById('resetBtn');
+
+        if (sendResetOtpBtn) {
+            sendResetOtpBtn.addEventListener('click', async function () {
+                const phone = phoneInput.value.trim();
+
+                if (!phone) {
+                    showMessage('Please enter your phone number first', 'error');
+                    return;
+                }
+
+                try {
+                    showMessage('Sending Mobile OTP...', 'info');
+                    sendResetOtpBtn.disabled = true;
+                    sendResetOtpBtn.textContent = 'Sending...';
+
                     const response = await fetch(`${API_BASE}/auth/send-reset-otp`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ email: email })
+                        body: JSON.stringify({ phone: phone })
                     });
-                    
-                    const result = await response.text();
-                    console.log('OTP send response:', { 
-                        status: response.status, 
-                        result: result 
-                    });
-                    
+
+                    const resultText = await response.text();
                     if (response.ok) {
-                        showMessage('OTP sent successfully! Check your console for the OTP code. Enter the OTP and new password below.', 'success');
-                        otpSent = true;
-                        
-                        // Show OTP and Password fields
-                        if (otpGroup) otpGroup.style.display = 'block';
-                        if (passwordGroup) passwordGroup.style.display = 'block';
-                        
-                        // Update button text
-                        resetBtn.disabled = false;
-                        resetBtn.textContent = 'Reset Password';
-                        
-                        // Start OTP timer
-                        startOTPTimer(resetBtn);
-                        
-                        // Focus on OTP field
-                        setTimeout(() => {
-                            const otpField = document.getElementById('otp');
-                            if (otpField) otpField.focus();
-                        }, 100);
-                        
+                        showMessage('OTP sent to mobile! Check backend console.', 'success');
+                        resetOtpGroup.style.display = 'block';
+                        resetPasswordGroup.style.display = 'block';
+                        resetBtn.style.display = 'block';
+
+                        startOTPTimer(sendResetOtpBtn);
+                        document.getElementById('resetOtp').focus();
                     } else {
-                        showMessage('Failed to send OTP: ' + result, 'error');
-                        resetBtn.disabled = false;
-                        resetBtn.textContent = 'Send OTP';
+                        showMessage('Failed to send OTP: ' + resultText, 'error');
+                        sendResetOtpBtn.disabled = false;
+                        sendResetOtpBtn.textContent = 'Send OTP';
                     }
-                    
-                } else {
-                    // STEP 2: Reset Password with OTP
-                    console.log('Step 2: Resetting password with OTP');
-                    
-                    if (!otp || otp.length !== 6) {
-                        showMessage('Please enter a valid 6-digit OTP', 'error');
-                        return;
-                    }
-                    
-                    if (!newPassword || newPassword.length < 6) {
-                        showMessage('Password must be at least 6 characters', 'error');
-                        return;
-                    }
-                    
-                    showMessage('Resetting password...', 'info');
-                    resetBtn.disabled = true;
-                    resetBtn.textContent = 'Resetting...';
-                    
-                    const response = await fetch(`${API_BASE}/auth/reset-password`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            email: email,
-                            newPassword: newPassword,
-                            otp: otp
-                        })
-                    });
-                    
-                    const result = await response.text();
-                    console.log('Password reset response:', { 
-                        status: response.status, 
-                        result: result 
-                    });
-                    
-                    if (response.ok) {
-                        showMessage('Password reset successful! Redirecting to login...', 'success');
-                        setTimeout(() => {
-                            window.location.href = 'login.html';
-                        }, 2000);
-                    } else {
-                        showMessage('Password reset failed: ' + result, 'error');
-                        resetBtn.disabled = false;
-                        resetBtn.textContent = 'Reset Password';
-                    }
+                } catch (error) {
+                    console.error('OTP error:', error);
+                    showMessage('Network error.', 'error');
+                    sendResetOtpBtn.disabled = false;
+                    sendResetOtpBtn.textContent = 'Send OTP';
                 }
-                
+            });
+        }
+
+        resetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const phone = phoneInput.value.trim();
+            const otp = document.getElementById('resetOtp').value.trim();
+            const newPassword = document.getElementById('newPassword').value;
+
+            if (!phone || !otp || !newPassword) {
+                showMessage('Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                showMessage('Resetting password...', 'info');
+                resetBtn.disabled = true;
+                resetBtn.textContent = 'Processing...';
+
+                const response = await fetch(`${API_BASE}/auth/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        otp: otp,
+                        newPassword: newPassword
+                    })
+                });
+
+                const resultText = await response.text();
+
+                if (response.ok) {
+                    showMessage('Password reset successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'reset-password.html';
+                    }, 1500);
+                } else {
+                    showMessage(resultText, 'error');
+                    resetBtn.disabled = false;
+                    resetBtn.textContent = 'Reset Password';
+                }
             } catch (error) {
-                console.error('Password reset error:', error);
-                showMessage('Operation failed. Please check your connection and try again.', 'error');
+                console.error('Reset error:', error);
+                showMessage('Password reset failed.', 'error');
                 resetBtn.disabled = false;
-                resetBtn.textContent = otpSent ? 'Reset Password' : 'Send OTP';
+                resetBtn.textContent = 'Reset Password';
             }
         });
     }
 }
 
-// Registration with OTP
-if (document.getElementById('registrationForm')) {
+if (document.getElementById('registerFormElement')) {
     const sendOtpBtn = document.getElementById('sendOtpBtn');
-    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('mobileNumber');
     const otpGroup = document.getElementById('otpGroup');
     const registerBtn = document.getElementById('registerBtn');
-    
-    sendOtpBtn.addEventListener('click', async function() {
-        const email = emailInput.value.trim();
-        
-        if (!email) {
-            showMessage('Please enter your email first', 'error');
-            return;
-        }
-        
-        if (!isValidEmail(email)) {
-            showMessage('Please enter a valid email address', 'error');
-            return;
-        }
-        
-        try {
-            showMessage('Sending OTP...', 'info');
-            sendOtpBtn.disabled = true;
-            sendOtpBtn.textContent = 'Sending...';
-            
-            const response = await fetch(`${API_BASE}/auth/send-registration-otp`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email: email })
-            });
-            
-            const resultText = await response.text();
-            console.log('OTP send response:', { status: response.status, result: resultText });
-            
-            if (response.ok) {
-                showMessage('OTP sent! Check your console for the OTP code.', 'success');
-                otpGroup.style.display = 'block';
-                registerBtn.disabled = false;
-                startOTPTimer(sendOtpBtn);
-                
-                document.getElementById('otp').focus();
-            } else {
-                showMessage('Failed to send OTP: ' + resultText, 'error');
+
+    if (sendOtpBtn) {
+        sendOtpBtn.addEventListener('click', async function () {
+            const phone = phoneInput.value.trim();
+
+            if (!phone) {
+                showMessage('Please enter your mobile number first', 'error');
+                return;
+            }
+
+            try {
+                showMessage('Sending Mobile OTP...', 'info');
+                sendOtpBtn.disabled = true;
+                sendOtpBtn.textContent = 'Sending...';
+
+                const response = await fetch(`${API_BASE}/auth/send-registration-otp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ phone: phone })
+                });
+
+                const resultText = await response.text();
+                if (response.ok) {
+                    showMessage('OTP sent to mobile! Check backend console.', 'success');
+                    if (otpGroup) otpGroup.style.display = 'block';
+                    startOTPTimer(sendOtpBtn);
+                    const otpInput = document.getElementById('otpInput');
+                    if (otpInput) otpInput.focus();
+                } else {
+                    showMessage('Failed to send OTP: ' + resultText, 'error');
+                    sendOtpBtn.disabled = false;
+                    sendOtpBtn.textContent = 'Send OTP';
+                }
+            } catch (error) {
+                console.error('OTP error:', error);
+                showMessage('Network error.', 'error');
                 sendOtpBtn.disabled = false;
                 sendOtpBtn.textContent = 'Send OTP';
             }
-        } catch (error) {
-            console.error('OTP send error:', error);
-            showMessage('Network error. Please check if backend is running on port 8080.', 'error');
-            sendOtpBtn.disabled = false;
-            sendOtpBtn.textContent = 'Send OTP';
-        }
-    });
-    
-    document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+        });
+    }
+
+    document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const formData = {
-            name: document.getElementById('name').value.trim(),
-            email: document.getElementById('email').value.trim(),
-            phone: document.getElementById('phone').value.trim(),
-            password: document.getElementById('password').value,
-            otp: document.getElementById('otp').value.trim()
+            name: document.getElementById('registerName').value.trim(),
+            email: document.getElementById('registerEmail').value.trim(),
+            phone: document.getElementById('mobileNumber').value.trim(),
+            password: document.getElementById('registerPassword').value,
+            otp: document.getElementById('otpInput') ? document.getElementById('otpInput').value.trim() : '',
+            role: document.getElementById('userType').value.toUpperCase()
         };
-        
-        console.log('Registration attempt:', { ...formData, password: '***' });
-        
+
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
         if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.otp) {
-            showMessage('Please fill in all fields', 'error');
+            showMessage('Please fill in all fields including OTP', 'error');
             return;
         }
-        
-        if (formData.otp.length !== 6) {
-            showMessage('OTP must be 6 digits', 'error');
+
+        if (formData.password !== confirmPassword) {
+            showMessage('Passwords do not match', 'error');
             return;
         }
 
         try {
             showMessage('Creating account...', 'info');
-            registerBtn.disabled = true;
-            registerBtn.textContent = 'Creating Account...';
-            
+            if (registerBtn) {
+                registerBtn.disabled = true;
+                registerBtn.textContent = 'Creating Account...';
+            }
+
             const response = await fetch(`${API_BASE}/auth/register`, {
                 method: 'POST',
                 headers: {
@@ -298,40 +255,50 @@ if (document.getElementById('registrationForm')) {
                 },
                 body: JSON.stringify(formData)
             });
-            
+
             const resultText = await response.text();
-            console.log('Registration response:', { status: response.status, result: resultText });
-            
+
             if (response.ok) {
-                showMessage('Registration successful! Redirecting to login...', 'success');
+                showMessage('Registration successful! Redirecting...', 'success');
                 setTimeout(() => {
-                    window.location.href = 'login.html';
+                    const loginToggle = document.getElementById('loginToggle');
+                    if (loginToggle) {
+                        loginToggle.click();
+                        // Reset form
+                        document.getElementById('registerFormElement').reset();
+                        if (otpGroup) otpGroup.style.display = 'none';
+                        if (sendOtpBtn) {
+                            sendOtpBtn.disabled = false;
+                            sendOtpBtn.textContent = 'Send OTP';
+                        }
+                    } else {
+                        window.location.href = 'login.html';
+                    }
                 }, 2000);
             } else {
                 showMessage(resultText, 'error');
             }
         } catch (error) {
             console.error('Registration error:', error);
-            showMessage('Registration failed. Please check your connection.', 'error');
+            showMessage('Registration failed.', 'error');
         } finally {
-            registerBtn.disabled = false;
-            registerBtn.textContent = 'Create Account';
+            if (registerBtn) {
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Create Account';
+            }
         }
     });
 }
 
-// Login Functionality
-if (document.getElementById('loginForm')) {
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+if (document.getElementById('loginFormElement')) {
+    document.getElementById('loginFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const loginData = {
-            email: document.getElementById('email').value.trim(),
-            password: document.getElementById('password').value
+            email: document.getElementById('loginEmail').value.trim(),
+            password: document.getElementById('loginPassword').value
         };
-        
-        console.log('Login attempt:', { ...loginData, password: '***' });
-        
+
         if (!loginData.email || !loginData.password) {
             showMessage('Please fill in all fields', 'error');
             return;
@@ -339,7 +306,7 @@ if (document.getElementById('loginForm')) {
 
         try {
             showMessage('Signing in...', 'info');
-            
+
             const response = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: {
@@ -347,30 +314,34 @@ if (document.getElementById('loginForm')) {
                 },
                 body: JSON.stringify(loginData)
             });
-            
+
             const resultText = await response.text();
-            console.log('Login response:', { 
-                status: response.status, 
-                statusText: response.statusText,
-                result: resultText 
-            });
-            
+
             if (response.ok) {
+                const data = JSON.parse(resultText);
+
                 showMessage('Login successful! Redirecting...', 'success');
-                
+
                 localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userEmail', loginData.email);
-                console.log('Stored in localStorage:', { 
-                    isLoggedIn: true, 
-                    userEmail: loginData.email 
-                });
-                
+                localStorage.setItem('userEmail', data.email);
+                localStorage.setItem('userRole', data.role);
+                localStorage.setItem('userId', data.userId);
+
                 setTimeout(() => {
-                    // After login, go to the main dashboard (not the public landing page)
-                    window.location.href = 'dashboard.html';
+                    if (data.role === 'ADMIN') {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'dashboard.html';
+                    }
                 }, 1000);
             } else {
-                showMessage(resultText || 'Login failed. Please check your credentials.', 'error');
+                let errorMsg = resultText;
+                try {
+                    const errData = JSON.parse(resultText);
+                    if (errData.message) errorMsg = errData.message;
+                } catch (e) {
+                }
+                showMessage(errorMsg || 'Login failed. Please check your credentials.', 'error');
             }
         } catch (error) {
             console.error('Login error:', error);
@@ -379,7 +350,6 @@ if (document.getElementById('loginForm')) {
     });
 }
 
-// Load user data for pages that show profile info
 if (document.getElementById('userName')) {
     document.addEventListener('DOMContentLoaded', function () {
         console.log('Dashboard/home page initialization started');
@@ -410,28 +380,28 @@ function loadUserData(userEmail) {
     const userUrl = `${API_BASE}/auth/user?email=${encodeURIComponent(userEmail)}`;
     console.log('API URL:', userUrl);
     updateDebugInfo(`Calling: ${userUrl}`);
-    
+
     fetch(userUrl)
         .then(response => {
             console.log('Raw response:', response);
             updateDebugInfo(`Response status: ${response.status}`);
-            
+
             if (response.status === 404) {
                 return response.text().then(errorMessage => {
                     throw new Error(`User not found: ${errorMessage}`);
                 });
             }
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
             }
-            
+
             return response.json();
         })
         .then(user => {
             console.log('User data received:', user);
             updateDebugInfo(`Data received for: ${user.name}`);
-            
+
             if (user && typeof user === 'object') {
                 document.getElementById('userName').textContent = user.name || 'Unknown';
                 document.getElementById('userEmail').textContent = user.email || 'Not provided';
@@ -443,7 +413,6 @@ function loadUserData(userEmail) {
 
                 showMessage(`Welcome back, ${user.name}!`, 'success');
 
-                // After loading user info, also load their issues and analytics if those sections exist
                 if (document.getElementById('issueList')) {
                     loadUserIssues(user.email);
                 }
@@ -457,19 +426,18 @@ function loadUserData(userEmail) {
         .catch(error => {
             console.error('Error loading user data:', error);
             updateDebugInfo(`Error: ${error.message}`);
-            
+
             document.getElementById('userName').textContent = 'Error Loading';
             document.getElementById('userEmail').textContent = userEmail;
             document.getElementById('userPhone').textContent = 'Check Console';
             document.getElementById('userId').textContent = 'N/A';
-            
+
             showMessage(`Failed to load user data: ${error.message}`, 'error');
         });
 }
 
-// Logout functionality
 if (document.getElementById('logoutBtn')) {
-    document.getElementById('logoutBtn').addEventListener('click', function() {
+    document.getElementById('logoutBtn').addEventListener('click', function () {
         console.log('Logout initiated');
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('userEmail');
@@ -481,11 +449,10 @@ if (document.getElementById('logoutBtn')) {
     });
 }
 
-// Issue reporting dashboard
 function initializeIssueDashboard() {
     const issueForm = document.getElementById('issueForm');
     if (!issueForm) {
-        return; // not on the dashboard page
+        return;
     }
 
     console.log('Initializing issue reporting dashboard');
@@ -703,7 +670,6 @@ async function loadAnalyticsSummary() {
     }
 }
 
-// Simple in-page chatbot (no external API)
 function initializeChatBot() {
     const chatToggle = document.getElementById('chatToggle');
     const chatWindow = document.getElementById('chatWindow');
@@ -713,7 +679,7 @@ function initializeChatBot() {
     const chatMessages = document.getElementById('chatMessages');
 
     if (!chatToggle || !chatWindow || !chatForm || !chatInput || !chatMessages) {
-        return; // chatbot not on this page
+        return;
     }
 
     function openChat() {
@@ -798,29 +764,310 @@ function initializeChatBot() {
     });
 }
 
-// Email validation helper
 function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
 }
 
-// Test functions for debugging
-window.testPassword = function(password) {
+window.testPassword = function (password) {
     fetch(`${API_BASE}/auth/test-password?password=${encodeURIComponent(password)}`)
         .then(response => response.text())
         .then(result => console.log('Password test:', result));
 };
 
-window.testUser = function(email) {
+window.testUser = function (email) {
     fetch(`${API_BASE}/auth/user?email=${encodeURIComponent(email)}`)
         .then(response => response.json())
         .then(result => console.log('User test:', result))
         .catch(error => console.log('User test error:', error));
 };
 
-window.debugOTP = function(email, purpose = 'PASSWORD_RESET') {
+window.debugOTP = function (email, purpose = 'PASSWORD_RESET') {
     fetch(`${API_BASE}/auth/debug/otp-status?email=${encodeURIComponent(email)}&purpose=${purpose}`)
         .then(response => response.text())
         .then(result => console.log('OTP Debug:', result))
         .catch(error => console.log('OTP Debug error:', error));
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    const adminToggle = document.getElementById('adminLoginToggle');
+    const emailLabel = document.getElementById('emailLabel');
+    const emailInput = document.getElementById('email');
+
+    if (adminToggle && emailLabel && emailInput) {
+        adminToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                emailLabel.textContent = 'Government Admin ID';
+                emailInput.placeholder = 'Enter your Admin ID';
+            } else {
+                emailLabel.textContent = 'Email Address';
+                emailInput.placeholder = 'Enter your email';
+            }
+        });
+    }
+});
+
+function initReportPage() {
+    const getLocationBtn = document.getElementById('getLocationBtn');
+    const locationInfo = document.getElementById('locationInfo');
+    const coordsSpan = document.getElementById('coords');
+    const latInput = document.getElementById('latitude');
+    const lngInput = document.getElementById('longitude');
+
+    if (getLocationBtn) {
+        getLocationBtn.addEventListener('click', () => {
+            if (navigator.geolocation) {
+                getLocationBtn.textContent = 'Acquiring Location...';
+                getLocationBtn.disabled = true;
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+
+                        latInput.value = lat;
+                        lngInput.value = lng;
+
+                        if (coordsSpan) coordsSpan.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        if (locationInfo) locationInfo.style.display = 'flex';
+                        getLocationBtn.innerHTML = '✅ Location Secured';
+                        getLocationBtn.classList.remove('btn-secondary');
+                        getLocationBtn.classList.add('btn-primary');
+                    },
+                    (error) => {
+                        console.error("Error getting location:", error);
+                        alert("Unable to retrieve your location. Please ensure location services are enabled.");
+                        getLocationBtn.textContent = '📍 Retry Location';
+                        getLocationBtn.disabled = false;
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        });
+    }
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const photoDataInput = document.getElementById('photoData');
+
+    if (dropZone && fileInput) {
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImageFile(file);
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--primary-color)';
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#cbd5e1';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#cbd5e1';
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleImageFile(file);
+            }
+        });
+    }
+
+    function handleImageFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (imagePreview) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+            }
+            if (photoDataInput) photoDataInput.value = e.target.result;
+            const p = dropZone.querySelector('p');
+            if (p) p.textContent = `✅ ${file.name} selected`;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    const reportForm = document.getElementById('reportForm');
+    if (reportForm) {
+        reportForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!localStorage.getItem('isLoggedIn')) {
+                alert("You must be logged in to report an issue.");
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            const userEmail = localStorage.getItem('userEmail');
+            const userId = localStorage.getItem('userId');
+
+            const issueData = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                category: document.getElementById('category').value,
+                latitude: document.getElementById('latitude').value,
+                longitude: document.getElementById('longitude').value,
+                photoUrl: document.getElementById('photoData') ? document.getElementById('photoData').value : null,
+                reporterEmail: userEmail,
+                reporterId: userId ? parseInt(userId) : null
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/issues`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(issueData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`Issue Reported Successfully! ID: ${result.id}`);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    const errorText = await response.text();
+                    alert(`Failed to submit report: ${errorText}`);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Report';
+                }
+            } catch (error) {
+                console.error('Error reporting issue:', error);
+                alert('An error occurred. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Report';
+            }
+        });
+    }
+}
+
+function initDashboardPage() {
+    const userNameSpan = document.getElementById('userName');
+    const issueList = document.getElementById('issueList');
+    const analyticsSummary = document.getElementById('analyticsSummary');
+
+    const userName = localStorage.getItem('userEmail') || 'Citizen';
+    if (userNameSpan) userNameSpan.textContent = userName.split('@')[0];
+
+    if (!localStorage.getItem('isLoggedIn')) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    loadUserIssues();
+
+    async function loadUserIssues() {
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+            if (issueList) issueList.innerHTML = '<p class="message info">User ID not found. Please log in again.</p>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/issues/user/${userId}`);
+            if (response.ok) {
+                const issues = await response.json();
+                renderIssues(issues);
+                updateAnalytics(issues);
+            } else {
+                if (issueList) issueList.innerHTML = '<p class="message error">Failed to load issues.</p>';
+            }
+        } catch (error) {
+            console.error('Error loading issues:', error);
+            if (issueList) issueList.innerHTML = '<p class="message error">Error loading issues.</p>';
+        }
+    }
+
+    function renderIssues(issues) {
+        if (!issueList) return;
+
+        if (!issues || issues.length === 0) {
+            issueList.innerHTML = '<p class="message info">You haven\'t reported any issues yet.</p>';
+            return;
+        }
+
+        issueList.innerHTML = issues.map(issue => `
+            <div class="issue-card">
+                <div class="issue-card-header">
+                    <span class="issue-title">${escapeHtml(issue.title)}</span>
+                    <span class="issue-status status-${issue.status}">${issue.status}</span>
+                </div>
+                <div class="issue-meta">
+                    Reported on ${new Date(issue.createdAt).toLocaleDateString()} • ${issue.category}
+                </div>
+                <div class="issue-description">${escapeHtml(issue.description)}</div>
+                ${issue.photoUrl ? `<img src="${issue.photoUrl}" class="issue-photo-thumb" alt="Issue Photo">` : ''}
+                ${issue.assignedDepartment ? `<div class="issue-meta" style="margin-top:8px;">Has been assigned to: <strong>${issue.assignedDepartment}</strong></div>` : ''}
+            </div>
+        `).join('');
+    }
+
+    function updateAnalytics(issues) {
+        if (!analyticsSummary) return;
+
+        const total = issues.length;
+
+        analyticsSummary.innerHTML = `
+            <div class="analytics-card">
+                <h4>My Reports</h4>
+                <p>${total}</p>
+            </div>
+        `;
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const path = window.location.pathname;
+    if (path.includes('dashboard.html')) {
+        initDashboardPage();
+    } else if (path.includes('report.html')) {
+        initReportPage();
+    }
+
+    // Password Toggle Logic
+    const toggleLoginPassword = document.getElementById('toggleLoginPassword');
+    const loginPassword = document.getElementById('loginPassword');
+
+    if (toggleLoginPassword && loginPassword) {
+        toggleLoginPassword.addEventListener('click', () => {
+            const type = loginPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+            loginPassword.setAttribute('type', type);
+            toggleLoginPassword.innerHTML = type === 'password' ? '<i class="far fa-eye"></i>' : '<i class="far fa-eye-slash"></i>';
+        });
+    }
+
+    const toggleRegisterPassword = document.getElementById('toggleRegisterPassword');
+    const registerPassword = document.getElementById('registerPassword');
+
+    if (toggleRegisterPassword && registerPassword) {
+        toggleRegisterPassword.addEventListener('click', () => {
+            const type = registerPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+            registerPassword.setAttribute('type', type);
+            toggleRegisterPassword.innerHTML = type === 'password' ? '<i class="far fa-eye"></i>' : '<i class="far fa-eye-slash"></i>';
+        });
+    }
+});

@@ -1,191 +1,301 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CrowdCivics - Civic Issue Reporting</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>CrowdCivics · full‑screen welcome</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .landing-page {
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-            max-width: 960px;
-            margin: 0 auto;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .landing-header {
+
+        html,
+        body {
+            background: #f0f4fa;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            line-height: 1.5;
+            color: #1e293b;
+        }
+
+        .brand-section {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 32px;
+            justify-content: center;
+            background: radial-gradient(circle at 10% 30%, #ffffff, #e6eff9);
+            /* padding: 2rem 1.5rem; */
         }
-        .brand-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #333;
+
+        .brand-content {
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(2px);
+            border-radius: 3rem 3rem 2rem 2rem;
+            padding: 3rem 10rem;
+            box-shadow: 0 30px 50px -20px rgba(0, 40, 80, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.6);
         }
-        .brand-subtitle {
-            color: #666;
-            font-size: 14px;
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1.5rem 1rem;
+            margin-bottom: 2.8rem;
         }
-        .landing-nav a {
-            margin-left: 12px;
-            padding: 8px 16px;
-            border-radius: 999px;
-            font-size: 14px;
-            text-decoration: none;
-        }
-        .nav-login {
-            border: 1px solid #667eea;
-            color: #667eea;
+
+        .logo-icon {
+            font-size: 2.4rem;
+            color: #1e4a6d;
             background: white;
+            width: 3.8rem;
+            height: 3.8rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1.5rem;
+            box-shadow: 0 6px 12px rgba(0, 40, 70, 0.1);
         }
-        .nav-register {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
+
+        .logo-text {
+            font-size: 2rem;
+            font-weight: 650;
+            letter-spacing: -0.02em;
+            color: #0b2b40;
+            margin-left: 0.2rem;
         }
-        .landing-content {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 32px;
+
+        .form-toggle {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
         }
-        .landing-hero h1 {
-            font-size: 32px;
-            margin-bottom: 12px;
-            color: #222;
-        }
-        .landing-hero p {
-            color: #555;
-            margin-bottom: 20px;
-        }
-        .landing-bullets li {
-            margin-bottom: 8px;
-            color: #444;
-            font-size: 14px;
-        }
-        .cta-buttons {
-            margin-top: 20px;
-        }
-        .cta-buttons a {
+
+        a.toggle-btn {
             text-decoration: none;
-        }
-        .landing-secondary {
-            background: #f8f9ff;
-            border-radius: 12px;
-            padding: 20px;
-        }
-        .landing-secondary h3 {
-            margin-bottom: 10px;
-            color: #333;
-        }
-        .landing-secondary p {
-            font-size: 13px;
-            color: #555;
-            margin-bottom: 10px;
-        }
-        .landing-tag {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            background: #e0ebff;
-            color: #1a3d8f;
-            font-size: 11px;
-            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 0.7rem 2rem;
+            border-radius: 60px;
+            transition: all 0.2s ease;
+            text-align: center;
+            border: 1.5px solid transparent;
+            cursor: pointer;
         }
-        @media (max-width: 900px) {
-            .landing-content {
+
+        #loginToggle {
+            background-color: white;
+            color: #1f4e7a;
+            border-color: #bdd3e8;
+            box-shadow: 0 4px 8px rgba(0, 30, 60, 0.04);
+        }
+
+        #loginToggle:hover {
+            background-color: #e9f0f8;
+            border-color: #7fa3c2;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 18px -8px rgba(20, 80, 140, 0.2);
+        }
+
+        #registerToggle {
+            background: #1f4e7a;
+            color: white;
+            border-color: #1f4e7a;
+            box-shadow: 0 8px 16px -6px #1f4e7a80;
+        }
+
+        #registerToggle:hover {
+            background: #123a5a;
+            border-color: #0e2e48;
+            transform: translateY(-2px);
+            box-shadow: 0 16px 22px -8px #0f3e62;
+        }
+
+        .brand-title {
+            font-size: clamp(2.2rem, 5vw, 3.8rem);
+            font-weight: 750;
+            line-height: 1.2;
+            max-width: 900px;
+            color: #0a2635;
+            margin: 0.5rem 0 1.2rem 0;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-subtitle {
+            font-size: 1.25rem;
+            color: #2a4053;
+            max-width: 800px;
+            margin-bottom: 3.5rem;
+            font-weight: 400;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 1.2rem 1.8rem;
+            border-radius: 2rem;
+            border-left: 4px solid #1f4e7a;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.8rem;
+            margin-top: 2rem;
+        }
+
+        .feature-item {
+            background: white;
+            border-radius: 2rem;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            box-shadow: 0 12px 24px -12px rgba(0, 47, 85, 0.15);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+        }
+
+        .feature-item:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 26px 35px -14px #1f4e7a50;
+        }
+
+        .feature-icon {
+            font-size: 2.2rem;
+            background: #e2edf7;
+            color: #1f4e7a;
+            width: 3.5rem;
+            height: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-text {
+            font-size: 1rem;
+            color: #1e3a4e;
+            line-height: 1.5;
+        }
+
+        .feature-text strong {
+            color: #0e3d5e;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 1.12rem;
+        }
+
+        /* @media (max-width: 1000px) {
+            .features {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .brand-content {
+                padding: 2.5rem 2rem;
+            }
+        } */
+
+        @media (max-width: 600px) {
+            .features {
                 grid-template-columns: 1fr;
             }
-            .landing-header {
+
+            .logo {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 12px;
             }
-            .landing-page {
-                padding: 24px 18px;
+
+            .form-toggle {
+                width: 100%;
+                justify-content: flex-start;
             }
+        }
+
+        @media (min-width: 1800px) {
+            .brand-content {
+                max-width: 1500px;
+            }
+        }
+
+        a.toggle-btn:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        .logo-icon i {
+            filter: drop-shadow(0 2px 4px rgba(0, 80, 120, 0.2));
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="landing-page">
-            <header class="landing-header">
-                <div>
-                    <div class="brand-title">CrowdCivics</div>
-                    <div class="brand-subtitle">Crowdsourced civic issue reporting for smarter cities</div>
-                </div>
-                <nav class="landing-nav">
-                    <a href="login.html" class="nav-login">Sign In</a>
-                    <a href="register.html" class="nav-register">Create Account</a>
-                </nav>
-            </header>
 
-            <main class="landing-content">
-                <section class="landing-hero">
-                    <h1>See an issue in your city? Report it in seconds.</h1>
-                    <p>
-                        CrowdCivics lets residents capture potholes, broken streetlights, overflowing bins
-                        and more using a simple, mobile-first interface. Your reports go straight to the
-                        right municipal department for faster action.
-                    </p>
-                    <ul class="landing-bullets">
-                        <li>📍 Automatic location tagging for every report</li>
-                        <li>📷 Attach photos for better context</li>
-                        <li>📊 Track the status of your reports from submission to resolution</li>
-                        <li>🗺️ City dashboard helps staff prioritize hotspots and bottlenecks</li>
-                    </ul>
-                    <div class="cta-buttons">
-                        <a href="register.html">
-                            <button class="btn-primary" type="button">Get Started – Create an Account</button>
-                        </a>
+    <div class="brand-section">
+        <div class="brand-content">
+            <div class="logo">
+                <div style="display: flex; align-items: center; gap: 0.3rem;">
+                    <div class="logo-icon">
+                        <i class="fas fa-city"></i>
                     </div>
-                </section>
-
-                <aside class="landing-secondary">
-                    <span class="landing-tag">For Municipal Staff</span>
-                    <h3>Administrative Dashboard</h3>
-                    <p>
-                        Filter issues by category, location, or priority. Assign items to the correct
-                        department and monitor response times through a live analytics view.
-                    </p>
-                    <p>
-                        To experience the full workflow, sign in with a test account, submit an issue,
-                        and see it appear on your personal dashboard.
-                    </p>
-                    <p style="font-size:12px;color:#777;margin-top:8px;">
-                        Note: This academic prototype focuses on citizen reporting, automated routing, and
-                        basic analytics rather than full production-scale infrastructure.
-                    </p>
-                </aside>
-            </main>
-        </div>
-    </div>
-
-    <!-- Simple in-app chatbot widget -->
-    <div class="chat-widget">
-        <button id="chatToggle" class="chat-toggle">Chat</button>
-        <div id="chatWindow" class="chat-window" aria-hidden="true">
-            <div class="chat-header">
-                <span>CrowdCivics Assistant</span>
-                <button id="chatClose" class="chat-close">&times;</button>
+                    <div class="logo-text">CrowdCivics</div>
+                </div>
+                <div class="form-toggle">
+                    <a href="login.html" class="toggle-btn" id="loginToggle" target="_blank">Sign In</a>
+                    <a href="register.html" class="toggle-btn" id="registerToggle" target="_blank">Create Account</a>
+                </div>
             </div>
-            <div id="chatMessages" class="chat-messages"></div>
-            <form id="chatForm" class="chat-form">
-                <input
-                    id="chatInput"
-                    type="text"
-                    class="chat-input"
-                    placeholder="Ask how to report an issue..."
-                    autocomplete="off"
-                />
-                <button type="submit" class="chat-send">Send</button>
-            </form>
+
+            <h1 class="brand-title">Join the community shaping smarter cities</h1>
+            <p class="brand-subtitle">
+                Connect with thousands of residents who are reporting civic issues, tracking resolutions,
+                and collaborating with municipal departments to create cleaner, safer, and more efficient cities.
+            </p>
+
+            <div class="features">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="feature-text">
+                        <strong>Automated location tagging</strong> for accurate issue reporting
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="feature-text">
+                        <strong>Real-time tracking</strong> of issue resolution progress
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="feature-text">
+                        <strong>Community collaboration</strong> with verified reports and upvotes
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="feature-text">
+                        <strong>Verified municipal response</strong> with official department updates
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="main.js"></script>
 </body>
+
 </html>

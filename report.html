@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Issue - CrowdCivics</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .camera-preview {
+            width: 100%;
+            height: 240px;
+            background: #000;
+            display: none;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            object-fit: cover;
+        }
+
+        .location-info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #0d47a1;
+            margin-top: 5px;
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: #f8fafc;
+        }
+
+        .upload-area p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        #imagePreview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header
+        style="background: white; padding: 15px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-weight: 700; font-size: 18px; color: var(--text-main);">CrowdCivics</div>
+        <a href="dashboard.html" class="btn-secondary" style="text-decoration: none; font-size: 13px;">Back to
+            Dashboard</a>
+    </header>
+
+    <div class="container" style="align-items: flex-start; padding-top: 30px;">
+        <div class="login-card" style="max-width: 600px;">
+            <h2>Report an Issue</h2>
+            <p class="subtitle">Help us improve your city by reporting problems.</p>
+
+            <form id="reportForm">
+                <div class="form-group">
+                    <label for="title">Issue Title</label>
+                    <input type="text" id="title" name="title" placeholder="e.g. Pothole on Main St" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" required>
+                        <option value="" disabled selected>Select a category</option>
+                        <option value="POTHOLE">Pothole / Road Damage</option>
+                        <option value="STREETLIGHT">Broken Streetlight</option>
+                        <option value="GARBAGE">Garbage / Sanitation</option>
+                        <option value="WATER">Water Leak / Pipe Issue</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Location</label>
+                    <div class="input-with-button">
+                        <button type="button" id="getLocationBtn" class="btn-secondary"
+                            style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            📍 Get My Location
+                        </button>
+                    </div>
+                    <div id="locationInfo" class="location-info">
+                        <span>Target Acquired:</span> <span id="coords"></span>
+                    </div>
+                    <input type="hidden" id="latitude" name="latitude">
+                    <input type="hidden" id="longitude" name="longitude">
+                    <input type="hidden" id="address" name="address">
+                </div>
+
+                <div class="form-group">
+                    <label>Photo Evidence</label>
+
+                    <div class="upload-area" id="dropZone">
+                        <p>📸 Click to take a photo or upload</p>
+                        <input type="file" id="fileInput" accept="image/*" capture="environment">
+                    </div>
+                    <img id="imagePreview" alt="Preview">
+
+                    <input type="hidden" id="photoData">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description & Details</label>
+                    <textarea id="description" name="description" rows="4"
+                        style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit;"
+                        placeholder="Describe the issue in detail..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary" id="submitBtn">Submit Report</button>
+            </form>
+
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof initReportPage === 'function') {
+                initReportPage();
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Profile - CrowdCivics</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
         <div class="dashboard">
@@ -48,7 +50,6 @@
         </div>
     </div>
 
-    <!-- Simple in-app chatbot widget -->
     <div class="chat-widget">
         <button id="chatToggle" class="chat-toggle">Chat</button>
         <div id="chatWindow" class="chat-window" aria-hidden="true">
@@ -58,13 +59,8 @@
             </div>
             <div id="chatMessages" class="chat-messages"></div>
             <form id="chatForm" class="chat-form">
-                <input
-                    id="chatInput"
-                    type="text"
-                    class="chat-input"
-                    placeholder="Ask about your account or reports..."
-                    autocomplete="off"
-                />
+                <input id="chatInput" type="text" class="chat-input" placeholder="Ask about your account or reports..."
+                    autocomplete="off" />
                 <button type="submit" class="chat-send">Send</button>
             </form>
         </div>
@@ -72,5 +68,5 @@
 
     <script src="main.js"></script>
 </body>
-</html>
 
+</html>

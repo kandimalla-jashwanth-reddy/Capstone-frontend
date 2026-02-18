@@ -1,61 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - CrowdCivics</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>CrowdCivics - Register</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="index.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1a3a8f 0%, #0a1f5c 100%);
+        }
+
+        .form-section {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 30px;
+            padding: 50px;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Hide the toggle buttons since we are on a dedicated page */
+        .form-toggle {
+            display: none;
+        }
+    </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="login-card">
-            <h2>Create Account</h2>
-            <p class="subtitle">Join CrowdCivics today - OTP Verification Required</p>
-            
-            <form id="registrationForm">
-                <div class="form-group">
-                    <label for="name">Full Name</label>
-                    <input type="text" id="name" name="name" placeholder="Enter your full name" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <div class="input-with-button">
-                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
-                        <button type="button" id="sendOtpBtn" class="btn-secondary">Send OTP</button>
+
+    <!-- Registration Form -->
+    <div class="form-section">
+        <div class="form-container">
+            <div class="form active" id="registerForm">
+                <h2 class="form-title">Create Account</h2>
+                <p class="form-subtitle">Join CrowdCivics and start making a difference</p>
+
+                <form id="registerFormElement">
+                    <div class="input-group">
+                        <label class="input-label" for="registerName">Full Name</label>
+                        <input type="text" id="registerName" class="input-field" placeholder="Full Name" required>
                     </div>
-                    <small style="color: #666; font-size: 12px;">We'll send a 6-digit OTP to verify your email</small>
+
+                    <div class="input-group">
+                        <label class="input-label" for="registerEmail">Email Address</label>
+                        <input type="email" id="registerEmail" class="input-field" placeholder="you@example.com"
+                            required>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="mobileNumber">Mobile Number</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="tel" id="mobileNumber" class="input-field"
+                                placeholder="Enter your mobile number" required style="flex: 1;">
+                            <button type="button" id="sendOtpBtn"
+                                style="padding: 0 15px; border-radius: 12px; border: 1px solid #e0e7ff; background: #fff; cursor: pointer; font-weight: 600; color: #1a3a8f;">Send
+                                OTP</button>
+                        </div>
+                    </div>
+
+                    <div class="input-group" id="otpGroup" style="display: none;">
+                        <label class="input-label" for="otpInput">Enter OTP</label>
+                        <input type="text" id="otpInput" class="input-field" placeholder="Enter 6-digit OTP"
+                            maxlength="6">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" class="input-field"
+                            placeholder="Create a strong password" required>
+                        <button type="button" class="password-toggle" id="toggleRegisterPassword">
+                            <i class="far fa-eye"></i>
+                        </button>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" class="input-field"
+                            placeholder="Confirm your password" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="userType">I am a:</label>
+                        <select id="userType" class="input-field">
+                            <option value="resident">Resident/Citizen</option>
+                            <option value="municipal">Municipal Staff</option>
+                        </select>
+                    </div>
+
+                    <div class="form-options">
+                        <div class="remember-me">
+                            <input type="checkbox" id="termsAgreement" required>
+                            <label for="termsAgreement">I agree to the <a href="#" style="color: #1a3a8f;">Terms of
+                                    Service</a> and <a href="#" style="color: #1a3a8f;">Privacy Policy</a></label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="registerBtn">Create Account</button>
+                </form>
+
+
+                <div class="form-footer">
+                    Already have an account? <a href="login.html" id="switchToLogin" target="_blank">Sign in here</a>
                 </div>
-                
-                <div class="form-group" id="otpGroup" style="display: none;">
-                    <label for="otp">Enter OTP</label>
-                    <input type="text" id="otp" name="otp" placeholder="Enter 6-digit OTP" maxlength="6" required 
-                           pattern="[0-9]{6}" title="Please enter exactly 6 digits">
-                    <small style="color: #666; font-size: 12px;">Check your email for the OTP code</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Create a password" required 
-                           minlength="6">
-                </div>
-                
-                <button type="submit" class="btn-primary" id="registerBtn" disabled>Create Account</button>
-            </form>
-            
-            <div class="links">
-                <p>Already have an account? <a href="login.html">Sign in here</a></p>
             </div>
-            
-            <div id="message" class="message"></div>
         </div>
     </div>
 
     <script src="main.js"></script>
 </body>
+
 </html>
