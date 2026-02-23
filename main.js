@@ -67,22 +67,22 @@ function initializeForgotPassword() {
         console.log('Forgot password page detected - initializing...');
 
         const sendResetOtpBtn = document.getElementById('sendResetOtpBtn');
-        const phoneInput = document.getElementById('resetPhone');
+        const emailInput = document.getElementById('resetEmail');
         const resetOtpGroup = document.getElementById('resetOtpGroup');
         const resetPasswordGroup = document.getElementById('resetPasswordGroup');
         const resetBtn = document.getElementById('resetBtn');
 
         if (sendResetOtpBtn) {
             sendResetOtpBtn.addEventListener('click', async function () {
-                const phone = phoneInput.value.trim();
+                const email = emailInput.value.trim();
 
-                if (!phone) {
-                    showMessage('Please enter your phone number first', 'error');
+                if (!email) {
+                    showMessage('Please enter your email address first', 'error');
                     return;
                 }
 
                 try {
-                    showMessage('Sending Mobile OTP...', 'info');
+                    showMessage('Sending Email OTP...', 'info');
                     sendResetOtpBtn.disabled = true;
                     sendResetOtpBtn.textContent = 'Sending...';
 
@@ -91,12 +91,12 @@ function initializeForgotPassword() {
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ phone: phone })
+                        body: JSON.stringify({ email: email })
                     });
 
                     const resultText = await response.text();
                     if (response.ok) {
-                        showMessage('OTP sent to mobile! Check backend console.', 'success');
+                        showMessage('OTP sent to email! Check your inbox.', 'success');
                         resetOtpGroup.style.display = 'block';
                         resetPasswordGroup.style.display = 'block';
                         resetBtn.style.display = 'block';
@@ -120,11 +120,11 @@ function initializeForgotPassword() {
         resetForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const phone = phoneInput.value.trim();
+            const email = emailInput.value.trim();
             const otp = document.getElementById('resetOtp').value.trim();
             const newPassword = document.getElementById('newPassword').value;
 
-            if (!phone || !otp || !newPassword) {
+            if (!email || !otp || !newPassword) {
                 showMessage('Please fill in all fields', 'error');
                 return;
             }
@@ -140,7 +140,7 @@ function initializeForgotPassword() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        phone: phone,
+                        email: email,
                         otp: otp,
                         newPassword: newPassword
                     })
@@ -176,15 +176,15 @@ if (document.getElementById('registerFormElement')) {
 
     if (sendOtpBtn) {
         sendOtpBtn.addEventListener('click', async function () {
-            const phone = phoneInput.value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
 
-            if (!phone) {
-                showMessage('Please enter your mobile number first', 'error');
+            if (!email) {
+                showMessage('Please enter your email address first', 'error');
                 return;
             }
 
             try {
-                showMessage('Sending Mobile OTP...', 'info');
+                showMessage('Sending Email OTP...', 'info');
                 sendOtpBtn.disabled = true;
                 sendOtpBtn.textContent = 'Sending...';
 
@@ -193,12 +193,12 @@ if (document.getElementById('registerFormElement')) {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ phone: phone })
+                    body: JSON.stringify({ email: email })
                 });
 
                 const resultText = await response.text();
                 if (response.ok) {
-                    showMessage('OTP sent to mobile! Check backend console.', 'success');
+                    showMessage('OTP sent to email! Check your inbox.', 'success');
                     if (otpGroup) otpGroup.style.display = 'block';
                     startOTPTimer(sendOtpBtn);
                     const otpInput = document.getElementById('otpInput');
@@ -217,6 +217,35 @@ if (document.getElementById('registerFormElement')) {
         });
     }
 
+    // Toggle Government ID field based on user type buttons
+    const customerBtn = document.getElementById('customerBtn');
+    const sellerBtn = document.getElementById('sellerBtn');
+    const adminIdGroup = document.getElementById('adminIdGroup');
+    const adminIdInput = document.getElementById('adminId');
+    const formTitle = document.querySelector('.form-title');
+
+    function setRole(role) {
+        if (role === 'municipal') {
+            sellerBtn.classList.add('active');
+            customerBtn.classList.remove('active');
+            adminIdGroup.style.display = 'block';
+            adminIdInput.setAttribute('required', 'true');
+            if (formTitle) formTitle.textContent = 'Municipal Registration';
+        } else {
+            customerBtn.classList.add('active');
+            sellerBtn.classList.remove('active');
+            adminIdGroup.style.display = 'none';
+            adminIdInput.removeAttribute('required');
+            adminIdInput.value = '';
+            if (formTitle) formTitle.textContent = 'Citizen Registration';
+        }
+    }
+
+    if (customerBtn && sellerBtn && adminIdGroup) {
+        customerBtn.addEventListener('click', () => setRole('citizen'));
+        sellerBtn.addEventListener('click', () => setRole('municipal'));
+    }
+
     document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -226,8 +255,23 @@ if (document.getElementById('registerFormElement')) {
             phone: document.getElementById('mobileNumber').value.trim(),
             password: document.getElementById('registerPassword').value,
             otp: document.getElementById('otpInput') ? document.getElementById('otpInput').value.trim() : '',
-            role: document.getElementById('userType').value.toUpperCase()
+            password: document.getElementById('registerPassword').value,
+            otp: document.getElementById('otpInput') ? document.getElementById('otpInput').value.trim() : '',
+            role: document.getElementById('sellerBtn').classList.contains('active') ? 'ADMIN' : 'CITIZEN'
         };
+
+        if (formData.role === 'ADMIN') {
+            const adminId = document.getElementById('adminId').value.trim();
+            if (!adminId) {
+                showMessage('Please enter your Government Unique ID', 'error');
+                return;
+            }
+            if (!/^\d{8}$/.test(adminId)) {
+                showMessage('Government Unique ID must be exactly 8 digits', 'error');
+                return;
+            }
+            formData.adminId = adminId;
+        }
 
         const confirmPassword = document.getElementById('confirmPassword').value;
 
@@ -288,6 +332,33 @@ if (document.getElementById('registerFormElement')) {
             }
         }
     });
+}
+
+// Login Role Toggle Logic
+const loginCustomerBtn = document.getElementById('loginCustomerBtn');
+const loginSellerBtn = document.getElementById('loginSellerBtn');
+const loginEmailLabel = document.getElementById('loginEmailLabel');
+const loginEmailInput = document.getElementById('loginEmail');
+
+if (loginCustomerBtn && loginSellerBtn && loginEmailLabel && loginEmailInput) {
+    function setLoginRole(role) {
+        if (role === 'municipal') {
+            loginSellerBtn.classList.add('active');
+            loginCustomerBtn.classList.remove('active');
+            loginEmailLabel.textContent = 'Government Unique ID';
+            loginEmailInput.placeholder = 'Enter Government ID';
+            loginEmailInput.type = 'text';
+        } else {
+            loginCustomerBtn.classList.add('active');
+            loginSellerBtn.classList.remove('active');
+            loginEmailLabel.textContent = 'Email Address';
+            loginEmailInput.placeholder = 'you@example.com';
+            loginEmailInput.type = 'email';
+        }
+    }
+
+    loginCustomerBtn.addEventListener('click', () => setLoginRole('citizen'));
+    loginSellerBtn.addEventListener('click', () => setLoginRole('municipal'));
 }
 
 if (document.getElementById('loginFormElement')) {
@@ -688,7 +759,7 @@ function initializeChatBot() {
         chatInput.focus();
 
         if (!chatMessages.dataset.initialized) {
-            addBotMessage('Hi! I am the CrowdCivics assistant. You can ask how to register, how to report an issue, or how to check your report status.');
+            addBotMessage('Hi! I am the CrowdCivics assistant. How can I help?');
             chatMessages.dataset.initialized = 'true';
         }
     }

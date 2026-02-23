@@ -41,6 +41,23 @@
                 <p class="form-subtitle">Join CrowdCivics and start making a difference</p>
 
                 <form id="registerFormElement">
+                    <Div>Select who are you:</Div>
+                    <div class="user-type-buttons">
+                        <button class="user-type-btn active" id="customerBtn">
+                            <i class="fas fa-user"></i> Citezen
+                        </button>
+                        <button class="user-type-btn" id="sellerBtn">
+                            <i class="fas fa-store"></i> Municipal Staff
+                        </button>
+                    </div>
+
+
+
+                    <div class="input-group" id="adminIdGroup" style="display: none;">
+                        <label class="input-label" for="adminId">Government Unique ID</label>
+                        <input type="text" id="adminId" class="input-field" placeholder="Enter Government ID">
+                    </div>
+
                     <div class="input-group">
                         <label class="input-label" for="registerName">Full Name</label>
                         <input type="text" id="registerName" class="input-field" placeholder="Full Name" required>
@@ -48,19 +65,19 @@
 
                     <div class="input-group">
                         <label class="input-label" for="registerEmail">Email Address</label>
-                        <input type="email" id="registerEmail" class="input-field" placeholder="you@example.com"
-                            required>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label" for="mobileNumber">Mobile Number</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="tel" id="mobileNumber" class="input-field"
-                                placeholder="Enter your mobile number" required style="flex: 1;">
+                            <input type="email" id="registerEmail" class="input-field" placeholder="you@example.com"
+                                required style="flex: 1;">
                             <button type="button" id="sendOtpBtn"
                                 style="padding: 0 15px; border-radius: 12px; border: 1px solid #e0e7ff; background: #fff; cursor: pointer; font-weight: 600; color: #1a3a8f;">Send
                                 OTP</button>
                         </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="mobileNumber">Mobile Number</label>
+                        <input type="tel" id="mobileNumber" class="input-field" placeholder="Enter your mobile number"
+                            required>
                     </div>
 
                     <div class="input-group" id="otpGroup" style="display: none;">
@@ -82,14 +99,6 @@
                         <label class="input-label" for="confirmPassword">Confirm Password</label>
                         <input type="password" id="confirmPassword" class="input-field"
                             placeholder="Confirm your password" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label" for="userType">I am a:</label>
-                        <select id="userType" class="input-field">
-                            <option value="resident">Resident/Citizen</option>
-                            <option value="municipal">Municipal Staff</option>
-                        </select>
                     </div>
 
                     <div class="form-options">

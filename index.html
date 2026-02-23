@@ -19,14 +19,49 @@
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             line-height: 1.5;
             color: #1e293b;
+            /* Ensure footer stays at bottom if content is short */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
+
+        .main-container {
+            max-width: 1200px;
+            min-width: 1000px;
+            /* Force rigid layout scaling */
+            margin: 0 auto;
+            width: 90%;
+            padding: 2rem 0;
+        }
+
+        .navbar {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+        }
+
+        .navbar .logo {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        /* --- Hero / Brand Section --- */
 
         .brand-section {
             display: flex;
             align-items: center;
             justify-content: center;
             background: radial-gradient(circle at 10% 30%, #ffffff, #e6eff9);
-            /* padding: 2rem 1.5rem; */
+            padding: 2rem 1.5rem;
+            flex: 1;
+            /* Pushes footer down */
         }
 
         .brand-content {
@@ -34,9 +69,11 @@
             background-color: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(2px);
             border-radius: 3rem 3rem 2rem 2rem;
-            padding: 3rem 10rem;
+            padding: 3rem 5rem;
             box-shadow: 0 30px 50px -20px rgba(0, 40, 80, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.6);
+            max-width: 1200px;
+            width: 100%;
         }
 
         .logo {
@@ -45,6 +82,7 @@
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 1.5rem 1rem;
+            width: 100%;
             margin-bottom: 2.8rem;
         }
 
@@ -59,6 +97,10 @@
             justify-content: center;
             border-radius: 1.5rem;
             box-shadow: 0 6px 12px rgba(0, 40, 70, 0.1);
+        }
+
+        .logo-icon i {
+            filter: drop-shadow(0 2px 4px rgba(0, 80, 120, 0.2));
         }
 
         .logo-text {
@@ -87,6 +129,11 @@
             text-align: center;
             border: 1.5px solid transparent;
             cursor: pointer;
+        }
+
+        a.toggle-btn:active {
+            transform: translateY(1px);
+            box-shadow: none;
         }
 
         #loginToggle {
@@ -123,7 +170,8 @@
             line-height: 1.2;
             max-width: 900px;
             color: #0a2635;
-            margin: 0.5rem 0 1.2rem 0;
+            padding-top: 120px;
+            /* margin: 0.5rem 0 1.2rem 0; */
             letter-spacing: -0.02em;
         }
 
@@ -152,7 +200,9 @@
             padding: 2rem 1.5rem;
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            justify-content: space-evenly;
+            align-items: center;
+            text-align: center;
             box-shadow: 0 12px 24px -12px rgba(0, 47, 85, 0.15);
             transition: transform 0.2s, box-shadow 0.2s;
             border: 1px solid rgba(255, 255, 255, 0.7);
@@ -190,7 +240,189 @@
             font-size: 1.12rem;
         }
 
-        /* @media (max-width: 1000px) {
+        /* --- About Section --- */
+
+        .about-section {
+            padding: 2rem 1.5rem;
+            background-color: #f8fbff;
+            text-align: center;
+            border-top: 1px solid #eef2ff;
+        }
+
+        .about-content {
+            max-width: 900px;
+            min-width: 800px;
+            /* Force rigid layout scaling */
+            margin: 0 auto;
+            padding: 0 30px;
+        }
+
+        .section-title {
+            font-size: 2.8rem;
+            color: #0a2635;
+            margin-bottom: 30px;
+            font-weight: 800;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: #4dc8ff;
+            border-radius: 2px;
+        }
+
+        .about-text {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: #4a6fa5;
+            font-weight: 400;
+        }
+
+
+        /* --- Footer Styles --- */
+
+        .footer {
+            background: linear-gradient(135deg, #0a1f5c 0%, #051030 100%);
+            color: white;
+            padding: 80px 0 30px;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+            margin-top: auto;
+            /* Ensures footer is at bottom */
+        }
+
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: nowrap;
+            /* Prevent wrapping for rigid scaling */
+            gap: 50px;
+            padding: 0 10%;
+            /* Increase side padding */
+            position: relative;
+            z-index: 1;
+            min-width: 1000px;
+            /* Match main container */
+        }
+
+        .footer-column {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .footer-logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+        }
+
+        .footer-logo i {
+            color: #4dc8ff;
+            font-size: 2rem;
+        }
+
+        .footer-desc {
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.7;
+            margin-bottom: 25px;
+            max-width: 320px;
+        }
+
+        .footer-column h3 {
+            font-size: 1.3rem;
+            margin-bottom: 25px;
+            color: #4dc8ff;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 15px;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .footer-links a:hover {
+            color: #4dc8ff;
+            transform: translateX(5px);
+        }
+
+        .social-icons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-icons a {
+            width: 45px;
+            height: 45px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .social-icons a:hover {
+            background: #4dc8ff;
+            color: #0a1f5c;
+            border-color: #4dc8ff;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(77, 200, 255, 0.2);
+        }
+
+        .footer-bottom {
+            margin-top: 70px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.95rem;
+        }
+
+
+        /* --- Responsive Queries --- */
+
+        @media (max-width: 768px) {
             .features {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -198,7 +430,7 @@
             .brand-content {
                 padding: 2.5rem 2rem;
             }
-        } */
+        }
 
         @media (max-width: 600px) {
             .features {
@@ -222,80 +454,361 @@
             }
         }
 
-        a.toggle-btn:active {
-            transform: translateY(1px);
-            box-shadow: none;
+        @media (max-width: 900px) {
+            .footer-container {
+                flex-direction: column;
+                gap: 60px;
+            }
+
+            .footer-column {
+                width: 50%;
+                text-align: center;
+                align-items: center;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .footer-logo,
+            .social-icons {
+                justify-content: center;
+            }
+
+            .section-title {
+                font-size: 2.2rem;
+            }
         }
 
-        .logo-icon i {
-            filter: drop-shadow(0 2px 4px rgba(0, 80, 120, 0.2));
+        /* --- Chat Widget --- */
+        .chat-widget {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 1rem;
+        }
+
+        .chat-toggle {
+            background: linear-gradient(135deg, #1f4e7a 0%, #163a5c 100%);
+            box-shadow: 0 10px 20px -5px rgba(31, 78, 122, 0.3);
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 9999px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .chat-toggle:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 15px 25px -5px rgba(31, 78, 122, 0.4);
+        }
+
+        .chat-window {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            width: 350px;
+            height: 500px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            transform-origin: bottom right;
+        }
+
+        .chat-window.open {
+            display: flex;
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #1f4e7a 0%, #163a5c 100%);
+            padding: 1rem;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .chat-close {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        .chat-close:hover {
+            opacity: 1;
+            transform: rotate(90deg);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            background-color: #f8fafc;
+        }
+
+        .chat-message {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .chat-message.bot {
+            align-self: flex-start;
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
+            border-bottom-left-radius: 0.25rem;
+        }
+
+        .chat-message.user {
+            align-self: flex-end;
+            background: #1f4e7a;
+            color: white;
+            border-bottom-right-radius: 0.25rem;
+        }
+
+        .chat-form {
+            padding: 1rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 0.5rem;
+            background: white;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 9999px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #1f4e7a;
+            box-shadow: 0 0 0 2px rgba(31, 78, 122, 0.1);
+        }
+
+        .chat-send {
+            background: #1f4e7a;
+            color: white;
+            border: none;
+            padding: 0 1.25rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chat-send:hover {
+            background: #123a5a;
         }
     </style>
 </head>
 
 <body>
-
-    <div class="brand-section">
-        <div class="brand-content">
-            <div class="logo">
-                <div style="display: flex; align-items: center; gap: 0.3rem;">
-                    <div class="logo-icon">
-                        <i class="fas fa-city"></i>
-                    </div>
-                    <div class="logo-text">CrowdCivics</div>
+    <nav class="navbar">
+        <div class="logo">
+            <div style="display: flex; align-items: center; gap: 0.3rem;">
+                <div class="logo-icon">
+                    <i class="fas fa-city"></i>
                 </div>
-                <div class="form-toggle">
-                    <a href="login.html" class="toggle-btn" id="loginToggle" target="_blank">Sign In</a>
-                    <a href="register.html" class="toggle-btn" id="registerToggle" target="_blank">Create Account</a>
-                </div>
+                <div class="logo-text">CrowdCivics</div>
             </div>
+            <div class="form-toggle">
+                <a href="#about" class="toggle-btn" id="loginToggle" style="color: #1f4e7a;">About</a>
+                <a href="login.html" class="toggle-btn" id="loginToggle">Sign In</a>
+                <a href="register.html" class="toggle-btn" id="registerToggle">Create Account</a>
+            </div>
+        </div>
+    </nav>
 
-            <h1 class="brand-title">Join the community shaping smarter cities</h1>
-            <p class="brand-subtitle">
-                Connect with thousands of residents who are reporting civic issues, tracking resolutions,
-                and collaborating with municipal departments to create cleaner, safer, and more efficient cities.
-            </p>
+    <h1 class="brand-title">Join the community shaping smarter cities</h1>
+    <p class="brand-subtitle">
+        Connect with thousands of residents who are reporting civic issues, tracking resolutions,
+        and collaborating with municipal departments to create cleaner, safer, and more efficient cities.
+    </p>
 
-            <div class="features">
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <div class="feature-text">
-                        <strong>Automated location tagging</strong> for accurate issue reporting
-                    </div>
-                </div>
+    <div class="features">
+        <div class="feature-item">
+            <div class="feature-icon">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <div class="feature-text">
+                <strong>Automated location tagging</strong> for accurate issue reporting
+            </div>
+        </div>
 
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="feature-text">
-                        <strong>Real-time tracking</strong> of issue resolution progress
-                    </div>
-                </div>
+        <div class="feature-item">
+            <div class="feature-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="feature-text">
+                <strong>Real-time tracking</strong> of issue resolution progress
+            </div>
+        </div>
 
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="feature-text">
-                        <strong>Community collaboration</strong> with verified reports and upvotes
-                    </div>
-                </div>
+        <div class="feature-item">
+            <div class="feature-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="feature-text">
+                <strong>Community collaboration</strong> with verified reports and upvotes
+            </div>
+        </div>
 
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <div class="feature-text">
-                        <strong>Verified municipal response</strong> with official department updates
-                    </div>
-                </div>
+        <div class="feature-item">
+            <div class="feature-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="feature-text">
+                <strong>Verified municipal response</strong> with official department updates
             </div>
         </div>
     </div>
 
+    <div class="how-it-works" style="text-align: center; padding: 4rem 1.5rem;">
+        <h2 class="section-title">How It Works</h2>
+        <div class="steps"
+            style="display: flex; justify-content: center; gap: 2rem; margin-top: 2rem; flex-wrap: wrap;">
+            <div class="feature-item" style="flex: 1; min-width: 250px; max-width: 350px; padding: 2.5rem 1.5rem;">
+                <div class="feature-icon"><i class="fas fa-pen-alt"></i></div>
+                <h3 style="margin-bottom: 0.5rem;">1. Report</h3>
+                <p>Spot a pothole or broken light? Submit a report with photo and location in seconds.</p>
+            </div>
+            <div class="feature-item" style="flex: 1; min-width: 250px; max-width: 350px; padding: 2.5rem 1.5rem;">
+                <div class="feature-icon"><i class="fas fa-users"></i></div>
+                <h3 style="margin-bottom: 0.5rem;">2. Collaborate</h3>
+                <p>Neighbors verify and upvote issues. The community’s voice grows stronger.</p>
+            </div>
+            <div class="feature-item" style="flex: 1; min-width: 250px; max-width: 350px; padding: 2.5rem 1.5rem;">
+                <div class="feature-icon"><i class="fas fa-check-circle"></i></div>
+                <h3 style="margin-bottom: 0.5rem;">3. Track</h3>
+                <p>Follow progress as city officials respond and resolve – all in real time.</p>
+            </div>
+            <div class="feature-item" style="flex: 1; min-width: 250px; max-width: 350px; padding: 2.5rem 1.5rem;">
+                <div class="feature-icon"><i class="fas fa-tools"></i></div>
+                <h3 style="margin-bottom: 0.5rem;">4. Resolve</h3>
+                <p>Municipal departments take action to fix the reported issues and update the status.</p>
+            </div>
+            <div class="feature-item" style="flex: 1; min-width: 250px; max-width: 350px; padding: 2.5rem 1.5rem;">
+                <div class="feature-icon"><i class="fas fa-comment-dots"></i></div>
+                <h3 style="margin-bottom: 0.5rem;">5. Feedback</h3>
+                <p>Provide your feedback on the resolution to help improve city services.</p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- About Section -->
+    <section class="about-section" id="about">
+        <h2 class="section-title">About CrowdCivics</h2>
+        <p class="about-text">
+            CrowdCivics is a cutting-edge civic engagement platform designed to bridge the gap between citizens and
+            municipal authorities.
+            Our mission is to empower residents to take an active role in improving their neighborhoods by providing
+            a transparent,
+            efficient, and collaborative tool for reporting and resolving civic issues. Use our platform to report
+            problems like potholes,
+            broken streetlights, and garbage dumps, and track the progress of your reports in real-time.
+        </p>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-column">
+                <div class="footer-logo">
+                    <i class="fas fa-city"></i> CrowdCivics
+                </div>
+                <p class="footer-desc">Empowering citizens to build better cities together.</p>
+            </div>
+            <div class="footer-column">
+                <h3>Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="#about">About Us</a></li>
+                    <li><a href="login.html">Sign In</a></li>
+                    <li><a href="register.html">Create Account</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h3>Contact</h3>
+                <ul class="footer-links">
+                    <li><a href="mailto:support@crowdcivics.com">support@crowdcivics.com</a></li>
+                    <li><a href="#">+1 (555) 123-4567</a></li>
+                    <li><a href="#">City Hall, Main Street</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h3>Connect</h3>
+                <div class="social-icons">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 CrowdCivics. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <div class="chat-widget">
+        <button id="chatToggle" class="chat-toggle">Chat</button>
+        <div id="chatWindow" class="chat-window" aria-hidden="true">
+            <div class="chat-header">
+                <span>CrowdCivics Assistant</span>
+                <button id="chatClose" class="chat-close">&times;</button>
+            </div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <form id="chatForm" class="chat-form">
+                <input id="chatInput" type="text" class="chat-input" placeholder="Ask about issues, status, help..."
+                    autocomplete="off" />
+                <button type="submit" class="chat-send">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
 </body>
 
 </html>
