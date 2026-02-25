@@ -12,7 +12,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: linear-gradient(135deg, #1a3a8f 0%, #0a1f5c 100%);
+            background: #f0f4fa;
         }
 
         .form-section {
@@ -56,6 +56,18 @@
                     <div class="input-group" id="adminIdGroup" style="display: none;">
                         <label class="input-label" for="adminId">Government Unique ID</label>
                         <input type="text" id="adminId" class="input-field" placeholder="Enter Government ID">
+                    </div>
+
+                    <div class="input-group" id="adminDepartmentGroup" style="display: none;">
+                        <label class="input-label" for="adminDepartment">Department</label>
+                        <select id="adminDepartment" class="input-field">
+                            <option value="">Select Department</option>
+                            <option value="Roads">Roads Department</option>
+                            <option value="Water">Water Department</option>
+                            <option value="Electricity">Electricity Board</option>
+                            <option value="Sanitation">Sanitation</option>
+                            <option value="Municipality">Municipality (General)</option>
+                        </select>
                     </div>
 
                     <div class="input-group">

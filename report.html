@@ -73,12 +73,14 @@
             Dashboard</a>
     </header>
 
-    <div class="container" style="align-items: flex-start; padding-top: 30px;">
-        <div class="login-card" style="max-width: 600px;">
-            <h2>Report an Issue</h2>
-            <p class="subtitle">Help us improve your city by reporting problems.</p>
+    <div class="container"
+        style="flex-direction: column; justify-content: flex-start; align-items: center; padding: 40px; max-width: 100%; min-height: 100vh; width: 100%; box-sizing: border-box;">
+        <div class="card" style="width: 100%; padding: 40px; border-radius: 12px; box-shadow: var(--shadow-lg);">
+            <h2 style="font-size: 2.2rem; margin-bottom: 10px; text-align: center;">Report an Issue</h2>
+            <p class="subtitle" style="text-align: center; font-size: 1.1rem; margin-bottom: 30px;">Help us improve your
+                city by reporting problems.</p>
 
-            <form id="reportForm">
+            <form id="reportForm" onsubmit="event.preventDefault();" style="width: 100%;">
                 <div class="form-group">
                     <label for="title">Issue Title</label>
                     <input type="text" id="title" name="title" placeholder="e.g. Pothole on Main St" required>
@@ -97,8 +99,11 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Location</label>
-                    <div class="input-with-button">
+                    <label for="address">Location / Address</label>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <input type="text" id="address" name="address"
+                            placeholder="Enter manual address or use GPS button below"
+                            style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">
                         <button type="button" id="getLocationBtn" class="btn-secondary"
                             style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
                             📍 Get My Location
@@ -109,7 +114,6 @@
                     </div>
                     <input type="hidden" id="latitude" name="latitude">
                     <input type="hidden" id="longitude" name="longitude">
-                    <input type="hidden" id="address" name="address">
                 </div>
 
                 <div class="form-group">
@@ -140,11 +144,7 @@
 
     <script src="main.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof initReportPage === 'function') {
-                initReportPage();
-            }
-        });
+        // main.js handles initialization
     </script>
 </body>
 

@@ -225,11 +225,16 @@ if (document.getElementById('registerFormElement')) {
     const formTitle = document.querySelector('.form-title');
 
     function setRole(role) {
+        const adminDeptGroup = document.getElementById('adminDepartmentGroup');
+        const adminDeptInput = document.getElementById('adminDepartment');
+
         if (role === 'municipal') {
             sellerBtn.classList.add('active');
             customerBtn.classList.remove('active');
             adminIdGroup.style.display = 'block';
             adminIdInput.setAttribute('required', 'true');
+            if (adminDeptGroup) adminDeptGroup.style.display = 'block';
+            if (adminDeptInput) adminDeptInput.setAttribute('required', 'true');
             if (formTitle) formTitle.textContent = 'Municipal Registration';
         } else {
             customerBtn.classList.add('active');
@@ -237,6 +242,11 @@ if (document.getElementById('registerFormElement')) {
             adminIdGroup.style.display = 'none';
             adminIdInput.removeAttribute('required');
             adminIdInput.value = '';
+            if (adminDeptGroup) adminDeptGroup.style.display = 'none';
+            if (adminDeptInput) {
+                adminDeptInput.removeAttribute('required');
+                adminDeptInput.value = '';
+            }
             if (formTitle) formTitle.textContent = 'Citizen Registration';
         }
     }
@@ -262,6 +272,8 @@ if (document.getElementById('registerFormElement')) {
 
         if (formData.role === 'ADMIN') {
             const adminId = document.getElementById('adminId').value.trim();
+            const adminDepartment = document.getElementById('adminDepartment') ? document.getElementById('adminDepartment').value.trim() : '';
+
             if (!adminId) {
                 showMessage('Please enter your Government Unique ID', 'error');
                 return;
@@ -270,7 +282,13 @@ if (document.getElementById('registerFormElement')) {
                 showMessage('Government Unique ID must be exactly 8 digits', 'error');
                 return;
             }
+            if (!adminDepartment) {
+                showMessage('Please select your Department', 'error');
+                return;
+            }
+
             formData.adminId = adminId;
+            formData.department = adminDepartment;
         }
 
         const confirmPassword = document.getElementById('confirmPassword').value;
@@ -391,6 +409,14 @@ if (document.getElementById('loginFormElement')) {
             if (response.ok) {
                 const data = JSON.parse(resultText);
 
+                const isMunicipalStaff = document.getElementById('loginSellerBtn').classList.contains('active');
+                const attemptedRole = isMunicipalStaff ? 'ADMIN' : 'CITIZEN';
+
+                if (data.role !== attemptedRole) {
+                    showMessage('Unauthorized access: Please select the correct user type for this account.', 'error');
+                    return;
+                }
+
                 showMessage('Login successful! Redirecting...', 'success');
 
                 localStorage.setItem('isLoggedIn', 'true');
@@ -474,19 +500,16 @@ function loadUserData(userEmail) {
             updateDebugInfo(`Data received for: ${user.name}`);
 
             if (user && typeof user === 'object') {
-                document.getElementById('userName').textContent = user.name || 'Unknown';
-                document.getElementById('userEmail').textContent = user.email || 'Not provided';
-                document.getElementById('userPhone').textContent = user.phone || 'Not provided';
-                document.getElementById('userId').textContent = user.id || 'Unknown';
+                if (document.getElementById('userName')) document.getElementById('userName').textContent = user.name || 'Unknown';
+                if (document.getElementById('userEmail')) document.getElementById('userEmail').textContent = user.email || 'Not provided';
+                if (document.getElementById('userPhone')) document.getElementById('userPhone').textContent = user.phone || 'Not provided';
+                if (document.getElementById('userId')) document.getElementById('userId').textContent = user.id || 'Unknown';
 
                 console.log('UI updated successfully');
                 updateDebugInfo('User data loaded successfully!');
 
                 showMessage(`Welcome back, ${user.name}!`, 'success');
 
-                if (document.getElementById('issueList')) {
-                    loadUserIssues(user.email);
-                }
                 if (document.getElementById('analyticsSummary')) {
                     loadAnalyticsSummary();
                 }
@@ -498,10 +521,10 @@ function loadUserData(userEmail) {
             console.error('Error loading user data:', error);
             updateDebugInfo(`Error: ${error.message}`);
 
-            document.getElementById('userName').textContent = 'Error Loading';
-            document.getElementById('userEmail').textContent = userEmail;
-            document.getElementById('userPhone').textContent = 'Check Console';
-            document.getElementById('userId').textContent = 'N/A';
+            if (document.getElementById('userName')) document.getElementById('userName').textContent = 'Error Loading';
+            if (document.getElementById('userEmail')) document.getElementById('userEmail').textContent = userEmail;
+            if (document.getElementById('userPhone')) document.getElementById('userPhone').textContent = 'Check Console';
+            if (document.getElementById('userId')) document.getElementById('userId').textContent = 'N/A';
 
             showMessage(`Failed to load user data: ${error.message}`, 'error');
         });
@@ -559,130 +582,84 @@ function initializeIssueDashboard() {
         });
     }
 
-    issueForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    if (issueForm && !issueForm.dataset.listenerAttached) {
+        issueForm.dataset.listenerAttached = 'true';
+        issueForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        const userEmail = localStorage.getItem('userEmail');
-        const reporterName = document.getElementById('userName')
-            ? document.getElementById('userName').textContent
-            : '';
-        const reporterPhone = document.getElementById('userPhone')
-            ? document.getElementById('userPhone').textContent
-            : '';
+            const userEmail = localStorage.getItem('userEmail');
+            const reporterName = document.getElementById('userName')
+                ? document.getElementById('userName').textContent
+                : '';
+            const reporterPhone = document.getElementById('userPhone')
+                ? document.getElementById('userPhone').textContent
+                : '';
 
-        const formData = new FormData();
-        formData.append('title', document.getElementById('issueTitle').value.trim());
-        formData.append('description', document.getElementById('issueDescription').value.trim());
-        formData.append('category', document.getElementById('issueCategory').value);
-        formData.append('priority', document.getElementById('issuePriority').value);
-        formData.append('address', document.getElementById('issueAddress').value.trim());
+            const formData = new FormData();
+            formData.append('title', document.getElementById('issueTitle').value.trim());
+            formData.append('description', document.getElementById('issueDescription').value.trim());
+            formData.append('category', document.getElementById('issueCategory').value);
+            formData.append('priority', document.getElementById('issuePriority').value);
+            formData.append('address', document.getElementById('issueAddress').value.trim());
 
-        const lat = latInput.value;
-        const lng = lngInput.value;
-        if (lat) formData.append('latitude', lat);
-        if (lng) formData.append('longitude', lng);
+            const lat = latInput.value;
+            const lng = lngInput.value;
+            if (lat) formData.append('latitude', lat);
+            if (lng) formData.append('longitude', lng);
 
-        if (reporterName) formData.append('reporterName', reporterName);
-        if (userEmail) formData.append('reporterEmail', userEmail);
-        if (reporterPhone && reporterPhone !== 'Not provided') {
-            formData.append('reporterPhone', reporterPhone);
-        }
-
-        const photoInput = document.getElementById('issuePhoto');
-        if (photoInput && photoInput.files && photoInput.files[0]) {
-            formData.append('photo', photoInput.files[0]);
-        }
-
-        if (!formData.get('title') || !formData.get('category')) {
-            showMessage('Please provide at least a title and category for the issue.', 'error');
-            return;
-        }
-
-        try {
-            showMessage('Submitting issue...', 'info');
-
-            const response = await fetch(`${API_BASE}/issues`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(text || 'Failed to submit issue');
+            if (reporterName) formData.append('reporterName', reporterName);
+            if (userEmail) formData.append('reporterEmail', userEmail);
+            if (reporterPhone && reporterPhone !== 'Not provided') {
+                formData.append('reporterPhone', reporterPhone);
             }
 
-            const savedIssue = await response.json();
-            console.log('Issue created:', savedIssue);
-            showMessage('Issue submitted successfully!', 'success');
-
-            issueForm.reset();
-            if (locationText) {
-                locationText.textContent = 'No location selected';
+            const photoInput = document.getElementById('issuePhoto');
+            if (photoInput && photoInput.files && photoInput.files[0]) {
+                formData.append('photo', photoInput.files[0]);
             }
-            latInput.value = '';
-            lngInput.value = '';
 
-            if (userEmail) {
-                loadUserIssues(userEmail);
+            if (!formData.get('title') || !formData.get('category')) {
+                showMessage('Please provide at least a title and category for the issue.', 'error');
+                return;
             }
-            loadAnalyticsSummary();
-        } catch (err) {
-            console.error('Issue submission error:', err);
-            showMessage(`Failed to submit issue: ${err.message}`, 'error');
-        }
-    });
-}
 
-async function loadUserIssues(userEmail) {
-    const listEl = document.getElementById('issueList');
-    if (!listEl) return;
+            try {
+                showMessage('Submitting issue...', 'info');
 
-    try {
-        listEl.innerHTML = '<p>Loading your reports...</p>';
-        const resp = await fetch(`${API_BASE}/issues?reporterEmail=${encodeURIComponent(userEmail)}`);
-        if (!resp.ok) {
-            throw new Error(`HTTP ${resp.status}`);
-        }
-        const issues = await resp.json();
+                const response = await fetch(`${API_BASE}/issues`, {
+                    method: 'POST',
+                    body: formData
+                });
 
-        if (!issues || issues.length === 0) {
-            listEl.innerHTML = '<p>You have not reported any issues yet.</p>';
-            return;
-        }
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(text || 'Failed to submit issue');
+                }
 
-        listEl.innerHTML = '';
-        issues.forEach(issue => {
-            const card = document.createElement('div');
-            card.className = 'issue-card';
+                const savedIssue = await response.json();
+                console.log('Issue created:', savedIssue);
+                showMessage('Issue submitted successfully!', 'success');
 
-            const statusClass = `status-${issue.status}`;
+                issueForm.reset();
+                if (locationText) {
+                    locationText.textContent = 'No location selected';
+                }
+                latInput.value = '';
+                lngInput.value = '';
 
-            card.innerHTML = `
-                <div class="issue-card-header">
-                    <span class="issue-title">${issue.title}</span>
-                    <span class="issue-status ${statusClass}">${issue.status}</span>
-                </div>
-                <div class="issue-meta">
-                    <span>Category: ${issue.category || 'N/A'}</span> ·
-                    <span>Priority: ${issue.priority || 'N/A'}</span> ·
-                    <span>Department: ${issue.assignedDepartment || 'Pending Routing'}</span>
-                </div>
-                <div class="issue-description">
-                    ${issue.description || 'No description provided.'}
-                </div>
-                ${issue.photoUrl ? `<img class="issue-photo-thumb" src="${issue.photoUrl}" alt="Issue photo">` : ''}
-                <div class="issue-meta">
-                    <span>Created: ${issue.createdAt ? new Date(issue.createdAt).toLocaleString() : 'N/A'}</span>
-                </div>
-            `;
-
-            listEl.appendChild(card);
+                if (userEmail) {
+                    loadUserIssues(userEmail);
+                }
+                loadAnalyticsSummary();
+            } catch (err) {
+                console.error('Issue submission error:', err);
+                showMessage(`Failed to submit issue: ${err.message}`, 'error');
+            }
         });
-    } catch (err) {
-        console.error('Failed to load issues:', err);
-        listEl.innerHTML = '<p>Failed to load your reports. Please try again later.</p>';
     }
 }
+
+
 
 async function loadAnalyticsSummary() {
     const container = document.getElementById('analyticsSummary');
@@ -925,7 +902,11 @@ function initReportPage() {
     const photoDataInput = document.getElementById('photoData');
 
     if (dropZone && fileInput) {
-        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('click', (e) => {
+            if (e.target !== fileInput) {
+                fileInput.click();
+            }
+        });
 
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -954,7 +935,42 @@ function initReportPage() {
         });
     }
 
-    function handleImageFile(file) {
+    async function handleImageFile(file) {
+        const p = dropZone.querySelector('p');
+        if (p) {
+            p.textContent = `⏳ Checking image for AI edits...`;
+        }
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        try {
+            const response = await fetch("http://localhost:3000/check-image", {
+                method: "POST",
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.ai_probability > 5) {
+                    alert("edited by using ai");
+                    if (p) p.textContent = `📸 Click to take a photo or upload`;
+                    fileInput.value = ""; // Reset file input
+                    if (imagePreview) {
+                        imagePreview.src = "";
+                        imagePreview.style.display = 'none';
+                    }
+                    if (photoDataInput) photoDataInput.value = "";
+                    return; // Reject image
+                }
+            } else {
+                console.warn("AI check failed or service unavailable, allowing image upload.");
+            }
+        } catch (error) {
+            console.error("Error connecting to AI image detector:", error);
+            // Decide if you want to block upload if service is down. For now, we proceed.
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             if (imagePreview) {
@@ -962,14 +978,14 @@ function initReportPage() {
                 imagePreview.style.display = 'block';
             }
             if (photoDataInput) photoDataInput.value = e.target.result;
-            const p = dropZone.querySelector('p');
-            if (p) p.textContent = `✅ ${file.name} selected`;
+            if (p) p.textContent = `✅ ${file.name} selected (AI Check Passed)`;
         };
         reader.readAsDataURL(file);
     }
 
     const reportForm = document.getElementById('reportForm');
-    if (reportForm) {
+    if (reportForm && !reportForm.dataset.listenerAttached) {
+        reportForm.dataset.listenerAttached = 'true';
         reportForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -992,6 +1008,7 @@ function initReportPage() {
                 category: document.getElementById('category').value,
                 latitude: document.getElementById('latitude').value,
                 longitude: document.getElementById('longitude').value,
+                address: document.getElementById('address') ? document.getElementById('address').value : null,
                 photoUrl: document.getElementById('photoData') ? document.getElementById('photoData').value : null,
                 reporterEmail: userEmail,
                 reporterId: userId ? parseInt(userId) : null
@@ -1008,7 +1025,7 @@ function initReportPage() {
 
                 if (response.ok) {
                     const result = await response.json();
-                    alert(`Issue Reported Successfully! ID: ${result.id}`);
+                    alert(`Issue Reported Successfully!`);
                     window.location.href = 'dashboard.html';
                 } else {
                     const errorText = await response.text();
@@ -1063,6 +1080,8 @@ function initDashboardPage() {
         }
     }
 
+    window.dashboardIssues = [];
+
     function renderIssues(issues) {
         if (!issueList) return;
 
@@ -1071,7 +1090,55 @@ function initDashboardPage() {
             return;
         }
 
-        issueList.innerHTML = issues.map(issue => `
+        // Sort by date descending
+        issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        window.dashboardIssues = issues;
+
+        renderIssueList(3);
+    }
+
+    window.renderIssueList = function (limit) {
+        if (!issueList) return;
+        const issuesToRender = window.dashboardIssues.slice(0, limit);
+        const hasMore = limit < window.dashboardIssues.length;
+
+        let html = issuesToRender.map(issue => {
+            let feedbackHtml = '';
+            if (issue.status === 'RESOLVED') {
+                if (issue.rating != null) {
+                    // Show existing feedback
+                    let stars = '';
+                    for (let i = 1; i <= 5; i++) {
+                        stars += i <= issue.rating ? '★' : '☆';
+                    }
+                    feedbackHtml = `
+                    <div class="feedback-section" style="margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <h4 style="margin: 0 0 5px 0; font-size: 0.95rem;">Your Feedback</h4>
+                        <div style="color: #f59e0b; font-size: 1.2rem; margin-bottom: 5px;">${stars}</div>
+                        ${issue.feedback ? `<p style="margin: 0; font-size: 0.9rem; color: #475569;">"${escapeHtml(issue.feedback)}"</p>` : ''}
+                    </div>`;
+                } else {
+                    // Show feedback form
+                    feedbackHtml = `
+                    <div class="feedback-section" style="margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">Rate Resolution</h4>
+                        <form onsubmit="submitFeedback(event, ${issue.id})" class="feedback-form">
+                            <div class="star-rating" style="color: #ccc; font-size: 1.5rem; cursor: pointer; margin-bottom: 10px;" id="star-rating-${issue.id}">
+                                <span onclick="setRating(${issue.id}, 1)">★</span>
+                                <span onclick="setRating(${issue.id}, 2)">★</span>
+                                <span onclick="setRating(${issue.id}, 3)">★</span>
+                                <span onclick="setRating(${issue.id}, 4)">★</span>
+                                <span onclick="setRating(${issue.id}, 5)">★</span>
+                                <input type="hidden" id="rating-${issue.id}" required>
+                            </div>
+                            <textarea id="feedback-${issue.id}" rows="2" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 10px;" placeholder="Leave a comment (optional)..."></textarea>
+                            <button type="submit" class="btn-primary" style="padding: 5px 10px; font-size: 0.85rem;">Submit Feedback</button>
+                        </form>
+                    </div>`;
+                }
+            }
+
+            return `
             <div class="issue-card">
                 <div class="issue-card-header">
                     <span class="issue-title">${escapeHtml(issue.title)}</span>
@@ -1081,10 +1148,20 @@ function initDashboardPage() {
                     Reported on ${new Date(issue.createdAt).toLocaleDateString()} • ${issue.category}
                 </div>
                 <div class="issue-description">${escapeHtml(issue.description)}</div>
-                ${issue.photoUrl ? `<img src="${issue.photoUrl}" class="issue-photo-thumb" alt="Issue Photo">` : ''}
+                ${issue.photoUrl ? `<div style="margin-top: 10px;"><img src="${issue.photoUrl}" class="issue-photo-thumb" alt="Issue Photo"></div>` : ''}
                 ${issue.assignedDepartment ? `<div class="issue-meta" style="margin-top:8px;">Has been assigned to: <strong>${issue.assignedDepartment}</strong></div>` : ''}
+                ${feedbackHtml}
             </div>
-        `).join('');
+            `;
+        }).join('');
+
+        if (hasMore) {
+            html += `<div style="text-align: center; margin-top: 20px;">
+                        <button type="button" onclick="renderIssueList(${limit + 3})" class="btn-secondary">View More</button>
+                     </div>`;
+        }
+
+        issueList.innerHTML = html;
     }
 
     function updateAnalytics(issues) {
@@ -1142,3 +1219,53 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// Feedback functionality
+window.setRating = function (issueId, rating) {
+    const starContainer = document.getElementById(`star-rating-${issueId}`);
+    if (!starContainer) return;
+
+    document.getElementById(`rating-${issueId}`).value = rating;
+
+    const stars = starContainer.getElementsByTagName('span');
+    for (let i = 0; i < stars.length; i++) {
+        if (i < rating) {
+            stars[i].style.color = '#f59e0b';
+        } else {
+            stars[i].style.color = '#ccc';
+        }
+    }
+};
+
+window.submitFeedback = async function (e, issueId) {
+    e.preventDefault();
+    const ratingInput = document.getElementById(`rating-${issueId}`);
+    const rating = ratingInput ? parseInt(ratingInput.value) : null;
+    const feedback = document.getElementById(`feedback-${issueId}`) ? document.getElementById(`feedback-${issueId}`).value : null;
+
+    if (!rating) {
+        alert('Please select a star rating.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/issues/${issueId}/feedback`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ rating, feedback })
+        });
+
+        if (response.ok) {
+            alert('Feedback submitted successfully!');
+            window.location.reload();
+        } else {
+            const errorText = await response.text();
+            alert(`Failed to submit feedback: ${errorText}`);
+        }
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        alert('An error occurred. Please try again.');
+    }
+};

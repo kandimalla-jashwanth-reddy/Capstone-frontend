@@ -9,45 +9,43 @@
 </head>
 
 <body>
-    <div class="container">
-        <div class="dashboard">
-            <div class="dashboard-header">
-                <div>
-                    <h1>Your Profile</h1>
-                    <p class="subtitle">Manage your CrowdCivics account details.</p>
-                </div>
-                <div class="action-buttons">
-                    <button id="logoutBtn" class="btn-secondary">Logout</button>
-                    <a href="dashboard.html" class="btn-action">Back to Dashboard</a>
-                </div>
+    <div class="dashboard full-width">
+        <div class="dashboard-header">
+            <div>
+                <h1>Your Profile</h1>
+                <p class="subtitle">Manage your CrowdCivics account details.</p>
             </div>
-
-            <div class="user-info">
-                <h2>Account Information</h2>
-                <div class="info-card">
-                    <p><strong>Name:</strong> <span id="userName">Loading...</span></p>
-                    <p><strong>Email:</strong> <span id="userEmail">Loading...</span></p>
-                    <p><strong>Phone:</strong> <span id="userPhone">Loading...</span></p>
-                    <p><strong>User ID:</strong> <span id="userId">Loading...</span></p>
-                </div>
+            <div class="action-buttons">
+                <button id="logoutBtn" class="btn-secondary">Logout</button>
+                <a href="dashboard.html" class="btn-action">Back to Dashboard</a>
             </div>
-
-            <div class="card">
-                <h2>About Your Profile</h2>
-                <p style="margin-bottom:8px;color:#555;">
-                    Your profile is used to attach your name and contact information to the civic
-                    issues you report. This helps municipal staff follow up if they need more details
-                    and keeps a history of the issues you have submitted.
-                </p>
-                <p style="margin-bottom:8px;color:#555;">
-                    Any issues you create from the dashboard will automatically use the name, email,
-                    and phone number shown on this page.
-                </p>
-            </div>
-
-            <div id="message" class="message"></div>
-            <div id="debugText" class="message info" style="margin-top:10px;"></div>
         </div>
+
+        <div class="user-info">
+            <h2>Account Information</h2>
+            <div class="info-card">
+                <p><strong>Name:</strong> <span id="userName">Loading...</span></p>
+                <p><strong>Email:</strong> <span id="userEmail">Loading...</span></p>
+                <p><strong>Phone:</strong> <span id="userPhone">Loading...</span></p>
+                <p><strong>User ID:</strong> <span id="userId">Loading...</span></p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>About Your Profile</h2>
+            <p style="margin-bottom:8px;color:#555;">
+                Your profile is used to attach your name and contact information to the civic
+                issues you report. This helps municipal staff follow up if they need more details
+                and keeps a history of the issues you have submitted.
+            </p>
+            <p style="margin-bottom:8px;color:#555;">
+                Any issues you create from the dashboard will automatically use the name, email,
+                and phone number shown on this page.
+            </p>
+        </div>
+
+        <div id="message" class="message"></div>
+        <div id="debugText" class="message info" style="margin-top:10px;"></div>
     </div>
 
     <div class="chat-widget">
