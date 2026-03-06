@@ -59,7 +59,86 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeIssueDashboard();
 
     initializeChatBot();
+
+    initializeProfilePreferences();
+
+    initializePasswordUpdate();
+
+    initializeUserLocationDisplay();
+
+    initializeNotifications();
 });
+
+function initializeNotifications() {
+    const bellBtn = document.getElementById('notificationBellBtn');
+    const dropdown = document.getElementById('notificationDropdown');
+    const badge = document.getElementById('notificationBadge');
+
+    if (!bellBtn || !dropdown) return;
+
+    bellBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+
+        // Hide badge when notifications are checked
+        if (badge && dropdown.classList.contains('show')) {
+            badge.style.display = 'none';
+        }
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!bellBtn.contains(e.target) && dropdown.classList.contains('show')) {
+            dropdown.classList.remove('show');
+        }
+    });
+
+    // Prevent closing when clicking inside the dropdown
+    dropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+}
+
+function initializeUserLocationDisplay() {
+    const locationDisplay = document.getElementById('userLocationDisplay');
+    if (!locationDisplay) return;
+
+    if (!navigator.geolocation) {
+        locationDisplay.innerHTML = '<i class="fas fa-map-marker-alt"></i> Location not supported';
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const { latitude, longitude } = position.coords;
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                const data = await response.json();
+
+                let locationName = '';
+                if (data.address) {
+                    locationName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.address.county || '';
+                    if (locationName && data.address.state) {
+                        locationName += ', ' + data.address.state;
+                    }
+                }
+
+                if (locationName) {
+                    locationDisplay.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${locationName}`;
+                } else {
+                    locationDisplay.innerHTML = `<i class="fas fa-map-marker-alt"></i> Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
+                }
+            } catch (error) {
+                console.error('Error reverse geocoding:', error);
+                locationDisplay.innerHTML = `<i class="fas fa-map-marker-alt"></i> Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
+            }
+        },
+        (error) => {
+            console.error('Geolocation error:', error);
+            locationDisplay.innerHTML = '<i class="fas fa-map-marker-alt"></i> Location access denied';
+        }
+    );
+}
 
 function initializeForgotPassword() {
     const resetForm = document.getElementById('passwordResetForm');
@@ -383,9 +462,13 @@ if (document.getElementById('loginFormElement')) {
     document.getElementById('loginFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        const isMunicipalStaff = document.getElementById('loginSellerBtn').classList.contains('active');
+        const attemptedRole = isMunicipalStaff ? 'ADMIN' : 'CITIZEN';
+
         const loginData = {
             email: document.getElementById('loginEmail').value.trim(),
-            password: document.getElementById('loginPassword').value
+            password: document.getElementById('loginPassword').value,
+            role: attemptedRole
         };
 
         if (!loginData.email || !loginData.password) {
@@ -408,9 +491,6 @@ if (document.getElementById('loginFormElement')) {
 
             if (response.ok) {
                 const data = JSON.parse(resultText);
-
-                const isMunicipalStaff = document.getElementById('loginSellerBtn').classList.contains('active');
-                const attemptedRole = isMunicipalStaff ? 'ADMIN' : 'CITIZEN';
 
                 if (data.role !== attemptedRole) {
                     showMessage('Unauthorized access: Please select the correct user type for this account.', 'error');
@@ -679,37 +759,37 @@ async function loadAnalyticsSummary() {
         totalCard.className = 'analytics-card';
         totalCard.innerHTML = `
             <h4>Total Issues</h4>
-            <p><strong>${data.totalIssues ?? 0}</strong> reported</p>
+            <div class="seperatediv"><strong>${data.totalIssues ?? 0}</strong> reported</div>
         `;
         container.appendChild(totalCard);
 
-        const statusCard = document.createElement('div');
-        statusCard.className = 'analytics-card';
-        statusCard.innerHTML = '<h4>By Status</h4>';
         const statusMap = data.byStatus || {};
         Object.keys(statusMap).forEach(key => {
-            const p = document.createElement('p');
-            p.textContent = `${key}: ${statusMap[key]}`;
-            statusCard.appendChild(p);
+            const card = document.createElement('div');
+            card.className = 'analytics-card';
+            card.innerHTML = `
+                <h4>Status: ${key}</h4>
+                <div class="seperatediv"><strong>${statusMap[key]}</strong> reported</div>
+            `;
+            container.appendChild(card);
         });
-        container.appendChild(statusCard);
 
-        const catCard = document.createElement('div');
-        catCard.className = 'analytics-card';
-        catCard.innerHTML = '<h4>By Category</h4>';
         const catMap = data.byCategory || {};
         Object.keys(catMap).forEach(key => {
-            const p = document.createElement('p');
-            p.textContent = `${key}: ${catMap[key]}`;
-            catCard.appendChild(p);
+            const card = document.createElement('div');
+            card.className = 'analytics-card';
+            card.innerHTML = `
+                <h4>Category: ${key}</h4>
+                <div class="seperatediv"><strong>${catMap[key]}</strong> reported</div>
+            `;
+            container.appendChild(card);
         });
-        container.appendChild(catCard);
 
         const avgCard = document.createElement('div');
         avgCard.className = 'analytics-card';
         avgCard.innerHTML = `
             <h4>Avg. Resolution Time</h4>
-            <p>${(data.avgResolutionHours || 0).toFixed(2)} hours (resolved issues)</p>
+            <div class="seperatediv"><strong>${(data.avgResolutionHours || 0).toFixed(2)}</strong> hours (resolved issues)</div>
         `;
         container.appendChild(avgCard);
     } catch (err) {
@@ -1104,7 +1184,8 @@ function initDashboardPage() {
 
         let html = issuesToRender.map(issue => {
             let feedbackHtml = '';
-            if (issue.status === 'RESOLVED') {
+
+            if (issue.status === 'RESOLVED' || issue.status === 'REJECTED') {
                 if (issue.rating != null) {
                     // Show existing feedback
                     let stars = '';
@@ -1118,10 +1199,10 @@ function initDashboardPage() {
                         ${issue.feedback ? `<p style="margin: 0; font-size: 0.9rem; color: #475569;">"${escapeHtml(issue.feedback)}"</p>` : ''}
                     </div>`;
                 } else {
-                    // Show feedback form
+                    // Show feedback form for resolved/rejected statuses
                     feedbackHtml = `
                     <div class="feedback-section" style="margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">Rate Resolution</h4>
+                        <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">Rate Experience</h4>
                         <form onsubmit="submitFeedback(event, ${issue.id})" class="feedback-form">
                             <div class="star-rating" style="color: #ccc; font-size: 1.5rem; cursor: pointer; margin-bottom: 10px;" id="star-rating-${issue.id}">
                                 <span onclick="setRating(${issue.id}, 1)">★</span>
@@ -1149,7 +1230,24 @@ function initDashboardPage() {
                 </div>
                 <div class="issue-description">${escapeHtml(issue.description)}</div>
                 ${issue.photoUrl ? `<div style="margin-top: 10px;"><img src="${issue.photoUrl}" class="issue-photo-thumb" alt="Issue Photo"></div>` : ''}
+                ${issue.status === 'REJECTED' && issue.rejectionReason ? `
+                    <div style="margin-top: 15px; padding: 10px; border-left: 4px solid #ef4444; background: #fef2f2; border-radius: 4px;">
+                        <h4 style="margin: 0 0 5px 0; font-size: 0.95rem; color: #b91c1c;">Rejection Reason</h4>
+                        <p style="margin: 0; font-size: 0.9rem; color: #7f1d1d;">${escapeHtml(issue.rejectionReason)}</p>
+                    </div>
+                ` : ''}
                 ${issue.assignedDepartment ? `<div class="issue-meta" style="margin-top:8px;">Has been assigned to: <strong>${issue.assignedDepartment}</strong></div>` : ''}
+                
+                ${issue.status === 'RESOLVED' && issue.resolutionPhotoUrl ? `
+                    <div style="margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <h4 style="margin: 0; font-size: 0.95rem; color: #15803d;">Resolution Proof</h4>
+                            <div>
+                                <button type="button" onclick="viewPhoto('${issue.resolutionPhotoUrl}')" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;">View Proof</button>
+                            </div>
+                        </div>
+                    </div>` : ''}
+
                 ${feedbackHtml}
             </div>
             `;
@@ -1269,3 +1367,125 @@ window.submitFeedback = async function (e, issueId) {
         alert('An error occurred. Please try again.');
     }
 };
+
+window.viewPhoto = function (url) {
+    const w = window.open("");
+    w.document.write(`<img src="${url}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: contain;">`);
+};
+
+window.downloadPhoto = function (url, filename) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+};
+
+function initializeProfilePreferences() {
+    const saveBtn = document.getElementById('savePreferencesBtn');
+    const emailUpdates = document.getElementById('prefEmailUpdates');
+    const smsAlerts = document.getElementById('prefSmsAlerts');
+    const newsletter = document.getElementById('prefNewsletter');
+
+    if (!saveBtn || !emailUpdates || !smsAlerts || !newsletter) {
+        return;
+    }
+
+    const savedEmail = localStorage.getItem('prefEmailUpdates');
+    const savedSms = localStorage.getItem('prefSmsAlerts');
+    const savedNews = localStorage.getItem('prefNewsletter');
+
+    if (savedEmail !== null) emailUpdates.checked = savedEmail === 'true';
+    if (savedSms !== null) smsAlerts.checked = savedSms === 'true';
+    if (savedNews !== null) newsletter.checked = savedNews === 'true';
+
+    saveBtn.addEventListener('click', function () {
+        localStorage.setItem('prefEmailUpdates', emailUpdates.checked);
+        localStorage.setItem('prefSmsAlerts', smsAlerts.checked);
+        localStorage.setItem('prefNewsletter', newsletter.checked);
+
+        saveBtn.textContent = 'Saved!';
+        saveBtn.disabled = true;
+
+        showMessage('Notification preferences saved successfully.', 'success');
+
+        setTimeout(() => {
+            saveBtn.textContent = originalText;
+            saveBtn.disabled = false;
+        }, 2000);
+    });
+}
+
+function initializePasswordUpdate() {
+    const updatePasswordForm = document.getElementById('updatePasswordForm');
+    const updatePasswordBtn = document.getElementById('updatePasswordBtn');
+    const messageDiv = document.getElementById('passwordUpdateMessage');
+
+    if (!updatePasswordForm || !updatePasswordBtn || !messageDiv) return;
+
+    updatePasswordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newUpdatePassword').value;
+        const confirmPassword = document.getElementById('confirmUpdatePassword').value;
+        const userEmail = localStorage.getItem('userEmail');
+
+        messageDiv.textContent = '';
+        messageDiv.style.color = '';
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            messageDiv.textContent = 'Please fill in all fields.';
+            messageDiv.style.color = 'red';
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            messageDiv.textContent = 'New passwords do not match.';
+            messageDiv.style.color = 'red';
+            return;
+        }
+
+        if (!userEmail) {
+            messageDiv.textContent = 'User email not found. Please log in again.';
+            messageDiv.style.color = 'red';
+            return;
+        }
+
+        try {
+            updatePasswordBtn.disabled = true;
+            updatePasswordBtn.textContent = 'Updating...';
+
+            const response = await fetch(`${API_BASE}/auth/update-password`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: userEmail,
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                })
+            });
+
+            const resultText = await response.text();
+
+            if (response.ok) {
+                messageDiv.textContent = 'Password updated successfully!';
+                messageDiv.style.color = 'green';
+                updatePasswordForm.reset();
+            } else {
+                messageDiv.textContent = resultText || 'Failed to update password.';
+                messageDiv.style.color = 'red';
+            }
+        } catch (error) {
+            console.error('Password update error:', error);
+            messageDiv.textContent = 'Network error occurred.';
+            messageDiv.style.color = 'red';
+        } finally {
+            updatePasswordBtn.disabled = false;
+            updatePasswordBtn.textContent = 'Update Password';
+        }
+    });
+}

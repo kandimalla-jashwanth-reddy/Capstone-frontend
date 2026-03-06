@@ -95,11 +95,19 @@ function renderIssuesTable(issues) {
             locationHtml = '📍 Map';
         }
 
+        const dateReported = issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'Unknown';
+
+        const photoHtml = issue.photoUrl
+            ? `<button class="btn-secondary" onclick="viewPhoto('${issue.photoUrl}')" style="padding: 4px 8px; font-size: 0.8rem;">View Photo</button>`
+            : '<span style="color: #64748b; font-size: 0.85em;">No Photo</span>';
+
         tr.innerHTML = `
             <td>#${issue.id}</td>
+            <td>${dateReported}</td>
             <td>${escapeHtml(issue.title)}</td>
             <td>${issue.category}</td>
             <td>${locationHtml}</td>
+            <td>${photoHtml}</td>
             <td>
                 <select class="status-select" id="status-${issue.id}" onchange="togglePhotoUpload(${issue.id})">
                     <option value="NEW" ${issue.status === 'NEW' ? 'selected' : ''}>New</option>
@@ -157,6 +165,19 @@ async function updateIssueStatus(id) {
         payload.resolutionPhotoUrl = resolutionPhotoUrl;
     }
 
+    if (newStatus === 'REJECTED') {
+        const reason = prompt('Please enter the reason for rejecting this issue:');
+        if (reason === null) {
+            // User cancelled the prompt
+            return;
+        }
+        if (!reason.trim()) {
+            alert('A rejection reason is required.');
+            return;
+        }
+        payload.rejectionReason = reason.trim();
+    }
+
     const originalText = btn.textContent;
     btn.textContent = 'Saving...';
     btn.disabled = true;
@@ -207,3 +228,8 @@ function togglePhotoUpload(id) {
         if (fileInput) fileInput.value = '';
     }
 }
+
+window.viewPhoto = function (url) {
+    const w = window.open("");
+    w.document.write(`<img src="${url}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: contain;">`);
+};

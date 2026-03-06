@@ -67,10 +67,14 @@
 <body>
 
     <header
-        style="background: white; padding: 15px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+        style="position: sticky; top: 0; z-index: 1000; background: white; padding: 15px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
         <div style="font-weight: 700; font-size: 18px; color: var(--text-main);">CrowdCivics</div>
-        <a href="dashboard.html" class="btn-secondary" style="text-decoration: none; font-size: 13px;">Back to
-            Dashboard</a>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <a href="dashboard.html#myReportsSection" class="nav-link">My Reports</a>
+            <a href="dashboard.html#analyticsSection" class="nav-link">City Overview</a>
+            <a href="profile.html" class="nav-link">Profile</a>
+        </nav>
     </header>
 
     <div class="container"
