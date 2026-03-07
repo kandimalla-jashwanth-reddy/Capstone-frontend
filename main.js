@@ -80,9 +80,10 @@ function initializeNotifications() {
         e.stopPropagation();
         dropdown.classList.toggle('show');
 
-        // Hide badge when notifications are checked
-        if (badge && dropdown.classList.contains('show')) {
-            badge.style.display = 'none';
+        // Hide badge when notifications are checked and update last check time
+        if (dropdown.classList.contains('show')) {
+            if (badge) badge.style.display = 'none';
+            localStorage.setItem('lastNotificationCheck', new Date().toISOString());
         }
     });
 
@@ -97,6 +98,90 @@ function initializeNotifications() {
     dropdown.addEventListener('click', (e) => {
         e.stopPropagation();
     });
+}
+
+async function fetchAndDisplayNotifications(userId) {
+    const notificationList = document.getElementById('notificationList');
+    const badge = document.getElementById('notificationBadge');
+
+    if (!notificationList) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/issues/user/${userId}`);
+        if (!response.ok) throw new Error('Failed to fetch user issues');
+
+        const issues = await response.json();
+
+        // Filter for RESOLVED or REJECTED issues
+        const notificationIssues = issues.filter(issue =>
+            issue.status === 'RESOLVED' || issue.status === 'REJECTED'
+        );
+
+        // Sort by updatedAt descending
+        notificationIssues.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+        const lastCheckStr = localStorage.getItem('lastNotificationCheck');
+        const lastCheckDate = lastCheckStr ? new Date(lastCheckStr) : new Date(0);
+
+        let unreadCount = 0;
+        let htmlContent = '';
+
+        if (notificationIssues.length === 0) {
+            htmlContent = `
+                <div class="notification-item" style="padding: 1rem; text-align: center; color: var(--text-muted); border-bottom: none;">
+                    No new notifications
+                </div>
+            `;
+        } else {
+            notificationIssues.forEach(issue => {
+                const updatedTime = new Date(issue.updatedAt || issue.resolvedAt || issue.createdAt);
+                const isUnread = updatedTime > lastCheckDate;
+                if (isUnread) unreadCount++;
+
+                let iconHtml = '';
+                let titleHtml = '';
+                let descHtml = '';
+
+                if (issue.status === 'RESOLVED') {
+                    iconHtml = '<i class="fas fa-check-circle" style="color: var(--success-color);"></i>';
+                    titleHtml = 'Issue Resolved';
+                    descHtml = `Your report "${issue.title}" has been resolved.`;
+                } else if (issue.status === 'REJECTED') {
+                    iconHtml = '<i class="fas fa-times-circle" style="color: var(--danger-color);"></i>';
+                    titleHtml = 'Issue Rejected';
+                    descHtml = `Your report "${issue.title}" was rejected. ${issue.rejectionReason ? '<br>Reason: ' + issue.rejectionReason : ''}`;
+                }
+
+                // Format time nicely
+                const timeStr = updatedTime.toLocaleDateString() + ' ' + updatedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                htmlContent += `
+                    <div class="notification-item ${isUnread ? 'unread' : ''}">
+                        ${iconHtml}
+                        <div class="notification-content">
+                            <strong>${titleHtml}</strong>
+                            <p>${descHtml}</p>
+                            <span class="time">${timeStr}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        notificationList.innerHTML = htmlContent;
+
+        if (badge) {
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+    }
 }
 
 function initializeUserLocationDisplay() {
@@ -581,6 +666,7 @@ function loadUserData(userEmail) {
 
             if (user && typeof user === 'object') {
                 if (document.getElementById('userName')) document.getElementById('userName').textContent = user.name || 'Unknown';
+                if (document.getElementById('profileHeaderName')) document.getElementById('profileHeaderName').textContent = user.name || 'Your Profile';
                 if (document.getElementById('userEmail')) document.getElementById('userEmail').textContent = user.email || 'Not provided';
                 if (document.getElementById('userPhone')) document.getElementById('userPhone').textContent = user.phone || 'Not provided';
                 if (document.getElementById('userId')) document.getElementById('userId').textContent = user.id || 'Unknown';
@@ -592,6 +678,10 @@ function loadUserData(userEmail) {
 
                 if (document.getElementById('analyticsSummary')) {
                     loadAnalyticsSummary();
+                }
+
+                if (user.id) {
+                    fetchAndDisplayNotifications(user.id);
                 }
             } else {
                 throw new Error('Invalid user data format received');
@@ -816,7 +906,7 @@ function initializeChatBot() {
         chatInput.focus();
 
         if (!chatMessages.dataset.initialized) {
-            addBotMessage('Hi! I am the CrowdCivics assistant. How can I help?');
+            addBotMessage("Hi there! 👋 I'm your friendly CrowdCivics assistant. How can I help you make our city better today?");
             chatMessages.dataset.initialized = 'true';
         }
     }
@@ -841,26 +931,42 @@ function initializeChatBot() {
     function getBotReply(text) {
         const t = text.toLowerCase();
 
-        if (t.includes('register') || t.includes('sign up') || t.includes('account')) {
-            return 'To register, go to the landing page, click "Create Account", fill in your details, verify the OTP, and then you can log in to the dashboard.';
+        // Friendly greetings
+        if (t === 'hi' || t === 'hello' || t === 'hey' || t.includes('hey there')) {
+            return "Hey there! 👋 I'm your friendly neighborhood CrowdCivics bot. How's it going today? Need any help with reporting issues or checking your profile?";
         }
-        if (t.includes('login') || t.includes('sign in')) {
-            return 'Use your email and password on the Login page. After successful login you will be redirected to the dashboard.';
+        if (t.includes('how are you') || t.includes('whats up') || t.includes("what's up")) {
+            return "I'm doing great, thanks for asking! 😊 Just hanging out here waiting to help you make our city better. What's on your mind?";
         }
-        if (t.includes('report') || t.includes('issue') || t.includes('problem')) {
-            return 'On the dashboard, open "Report Issue", add a title, description, category, optional photo and location, then submit. The issue will appear under "My Reports".';
+        if (t.includes('thanks') || t.includes('thank you')) {
+            return "You're very welcome! Let me know if you need anything else. Have an awesome day! 🌟";
         }
-        if (t.includes('status') || t.includes('track') || t.includes('progress')) {
-            return 'You can track the status of your submitted issues in the "My Reports" section on the dashboard. Each report shows its current status such as NEW, IN_PROGRESS, or RESOLVED.';
-        }
-        if (t.includes('analytics') || t.includes('overview') || t.includes('statistics') || t.includes('chart')) {
-            return 'The "City Overview" section on the dashboard shows analytics like total issues, counts by status, counts by category, and average resolution time.';
-        }
-        if (t.includes('profile') || t.includes('name') || t.includes('phone') || t.includes('email')) {
-            return 'Your profile page shows your name, email, phone, and user ID. These details are attached to every issue you submit so staff can follow up.';
+        if (t === 'bye' || t === 'goodbye' || t.includes('see ya')) {
+            return "Catch you later! Keep up the great work in the community! 👋";
         }
 
-        return 'I am a simple built-in assistant. Try asking about registration, login, how to report an issue, how to track status, or what analytics are available.';
+        // Feature-specific friendly responses
+        if (t.includes('register') || t.includes('sign up') || t.includes('account')) {
+            return "Getting set up is super easy! Just head over to the landing page, hit 'Create Account', pop in your details and verify your OTP. You'll be ready to go in no time! 🚀";
+        }
+        if (t.includes('login') || t.includes('sign in')) {
+            return "Just hop over to the Login page and use your email and password. Once you're in, we'll take you straight to your dashboard! 🔑";
+        }
+        if (t.includes('report') || t.includes('issue') || t.includes('problem')) {
+            return "Spotted a problem? No worries! 🛠️ Just go to 'Report Issue' on your dashboard. Tell us what's wrong, add a photo if you have one, pin the location, and hit submit. We'll take it from there!";
+        }
+        if (t.includes('status') || t.includes('track') || t.includes('progress')) {
+            return "Curious about your reports? 🕵️‍♂️ You can track them all in the 'My Reports' section on your dashboard. We'll keep you posted if the status is NEW, IN_PROGRESS, or RESOLVED!";
+        }
+        if (t.includes('analytics') || t.includes('overview') || t.includes('statistics') || t.includes('chart')) {
+            return "Oh, you want the big picture? 📊 Check out the 'City Overview' section! It shows you all the cool stats like total issues reported, how quickly we're fixing things, and what types of issues are common down your street.";
+        }
+        if (t.includes('profile') || t.includes('name') || t.includes('phone') || t.includes('email')) {
+            return "Your profile is where you keep all your personal details up to date! 👤 We attach this info to your reports so the city staff knows who the local hero is and can contact you if they need to.";
+        }
+
+        // Friendly fallback
+        return "I'm still learning, so I might not understand everything perfectly yet! 😅 But I'm great at helping with registration, logging in, reporting issues, or checking analytics. Want to chat about one of those?";
     }
 
     chatToggle.addEventListener('click', () => {

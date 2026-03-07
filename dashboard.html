@@ -26,35 +26,18 @@
                 <a href="#myReportsSection" class="nav-link">My Reports</a>
                 <a href="#analyticsSection" class="nav-link">City Overview</a>
                 <a href="profile.html" class="nav-link">Profile</a>
+                <a href="#" class="nav-link btn-secondary" id="logoutBtn">Logout</a>
                 <div class="notification-container" style="position: relative; cursor: pointer; margin-left: 10px;"
                     id="notificationBellBtn">
                     <i class="far fa-bell" style="font-size: 1.5rem; color: #333;"></i>
                     <span class="notification-badge" id="notificationBadge"
-                        style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 0.7rem; font-weight: bold; border-radius: 50%; padding: 2px 6px; border: 2px solid var(--primary-color);">3</span>
+                        style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 0.7rem; font-weight: bold; border-radius: 50%; padding: 2px 6px; border: 2px solid var(--primary-color); display: none;">0</span>
                     <div class="notification-dropdown" id="notificationDropdown">
                         <div class="notification-header">Notifications</div>
-                        <div class="notification-item unread">
-                            <i class="fas fa-exclamation-circle" style="color: var(--primary-color);"></i>
-                            <div class="notification-content">
-                                <strong>Welcome to CrowdCivics!</strong>
-                                <p>Report your first civic issue today.</p>
-                                <span class="time">Just now</span>
-                            </div>
-                        </div>
-                        <div class="notification-item unread">
-                            <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
-                            <div class="notification-content">
-                                <strong>Pothole Repaired</strong>
-                                <p>Your report on Main St has been resolved.</p>
-                                <span class="time">2 hours ago</span>
-                            </div>
-                        </div>
-                        <div class="notification-item unread">
-                            <i class="fas fa-info-circle" style="color: var(--warning-color);"></i>
-                            <div class="notification-content">
-                                <strong>City Alert</strong>
-                                <p>Scheduled water maintenance on 5th Ave tomorrow.</p>
-                                <span class="time">1 day ago</span>
+                        <div id="notificationList">
+                            <div class="notification-item"
+                                style="padding: 1rem; text-align: center; color: var(--text-muted); border-bottom: none;">
+                                No new notifications
                             </div>
                         </div>
                     </div>
