@@ -1,4 +1,3 @@
-/* --- Global Reset & Base Styles --- */
 * {
     margin: 0;
     padding: 0;
@@ -7,8 +6,8 @@
 
 html,
 body {
-    background: #f0f4fa;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #f8fafc;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     line-height: 1.5;
     color: #1e293b;
     min-height: 100vh;
@@ -16,16 +15,23 @@ body {
     flex-direction: column;
 }
 
+.auth-page {
+    background: #0b1628;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
 .main-container {
     max-width: 1200px;
     min-width: 1000px;
-    /* Rigid scaling */
     margin: 0 auto;
     width: 90%;
     padding: 2rem 0;
 }
 
-/* --- Navbar --- */
 .navbar {
     background: white;
     padding: 1rem 2rem;
@@ -37,19 +43,15 @@ body {
     z-index: 1000;
     display: flex;
     justify-content: center;
-    /* Center the inner content */
 }
 
 .navbar .logo {
     margin-bottom: 0;
-    /* Override default logo margin */
     width: 100%;
     max-width: 1200px;
     min-width: 1000px;
-    /* Match main container rigidness */
 }
 
-/* --- Hero / Brand Section --- */
 .brand-section {
     display: flex;
     align-items: center;
@@ -179,98 +181,66 @@ a.toggle-btn:active {
     border-left: 4px solid #1f4e7a;
 }
 
-.features {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.8rem;
-    margin-top: 2rem;
+
+.how-it-works {
+    padding: 5rem 1.5rem;
+    text-align: center;
+    background: #f8fbff;
+    margin-top: 0;
 }
 
-.feature-item {
+.card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+    max-width: 1400px;
+    margin: 3rem auto 0;
+}
+
+#how-it-works .card,
+#features-section .card {
     background: white;
-    border-radius: 2rem;
-    padding: 2rem 1.5rem;
+    border-radius: 1.5rem;
+    padding: 3rem 2rem;
+    flex: 1;
+    min-width: 240px;
+    max-width: 300px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    border: none;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    box-shadow: 0 12px 24px -12px rgba(0, 47, 85, 0.15);
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 1px solid rgba(255, 255, 255, 0.7);
-}
-
-.feature-item:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 26px 35px -14px #1f4e7a50;
-}
-
-.feature-icon {
-    font-size: 2.2rem;
-    background: #e2edf7;
-    color: #1f4e7a;
-    width: 3.5rem;
-    height: 3.5rem;
-    display: flex;
     align-items: center;
-    justify-content: center;
-    border-radius: 1.2rem;
+    transition: transform 0.3s ease;
+}
+
+#how-it-works .card:hover,
+#features-section .card:hover {
+    transform: translateY(-5px);
+}
+
+#how-it-works .card-icon,
+#features-section .card-icon {
+    font-size: 2.5rem;
+    color: #f1c40f;
     margin-bottom: 1.5rem;
 }
 
-.feature-text {
-    font-size: 1rem;
-    color: #1e3a4e;
-    line-height: 1.5;
-}
-
-.feature-text strong {
-    color: #0e3d5e;
-    font-weight: 700;
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 1.12rem;
-}
-
-/* --- How It Works Section --- */
-.how-it-works {
-    padding: 4rem 1.5rem;
-    text-align: center;
-    background: white;
-    margin-top: 3rem;
-    border-radius: 2rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
-}
-
-.steps {
-    display: flex;
-    /* justify-content: center; */
-    gap: 3rem;
-    flex-wrap: wrap;
-    margin-top: 3rem;
-}
-
-.steps .feature-item {
-    flex: 1;
-    min-width: 250px;
-    max-width: 350px;
-}
-
-.steps .feature-icon {
-    margin: 0 auto 1.5rem;
-}
-
-.steps h3 {
-    font-size: 1.3rem;
-    color: #0a2635;
+#how-it-works .card h3,
+#features-section .card h3 {
+    font-size: 1.25rem;
+    color: #0b2b40;
     margin-bottom: 1rem;
     font-weight: 700;
 }
 
-.steps p {
+#how-it-works .card p,
+#features-section .card p {
+    font-size: 0.95rem;
     color: #4a6fa5;
     line-height: 1.6;
 }
 
-/* --- About Section --- */
 .about-section {
     padding: 4rem 1.5rem;
     background-color: #f8fbff;
@@ -281,7 +251,6 @@ a.toggle-btn:active {
 .about-content {
     max-width: 900px;
     min-width: 800px;
-    /* Rigid scaling */
     margin: 0 auto;
     padding: 0 30px;
 }
@@ -302,8 +271,8 @@ a.toggle-btn:active {
     left: 50%;
     transform: translateX(-50%);
     width: 60px;
-    height: 4px;
-    background: #4dc8ff;
+    height: 3px;
+    background: #f1c40f;
     border-radius: 2px;
 }
 
@@ -314,10 +283,9 @@ a.toggle-btn:active {
     font-weight: 400;
 }
 
-/* --- Auth Forms (Login / Register) --- */
 .form-section {
     width: 100%;
-    max-width: 500px;
+    max-width: 650px;
     background: white;
     padding: 3rem;
     border-radius: 2rem;
@@ -396,16 +364,17 @@ a.toggle-btn:active {
 }
 
 .user-type-btn.active {
-    background: #1f4e7a;
-    color: white;
-    border-color: #1f4e7a;
+    background: #f5c518;
+    color: #0b1628;
+    border-color: #f5c518;
+    box-shadow: 0 4px 12px rgba(245, 197, 24, 0.2);
 }
 
 .submit-btn {
     width: 100%;
     padding: 1rem;
-    background: linear-gradient(135deg, #1f4e7a 0%, #163a5c 100%);
-    color: white;
+    background: #f5c518;
+    color: #0b1628;
     border: none;
     border-radius: 1rem;
     font-size: 1.1rem;
@@ -413,7 +382,7 @@ a.toggle-btn:active {
     cursor: pointer;
     transition: all 0.2s;
     margin-top: 1rem;
-    box-shadow: 0 10px 20px -5px rgba(31, 78, 122, 0.3);
+    box-shadow: 0 10px 20px -5px rgba(245, 197, 24, 0.3);
 }
 
 .submit-btn:hover {
@@ -437,7 +406,7 @@ a.toggle-btn:active {
 }
 
 .forgot-password {
-    color: #1f4e7a;
+    color: #f5c518;
     text-decoration: none;
     font-weight: 600;
 }
@@ -449,7 +418,7 @@ a.toggle-btn:active {
 }
 
 .form-footer a {
-    color: #1f4e7a;
+    color: #f5c518;
     font-weight: 700;
     text-decoration: none;
 }
@@ -466,7 +435,6 @@ a.toggle-btn:active {
 }
 
 
-/* --- Footer Styles --- */
 .footer {
     background: linear-gradient(135deg, #0a1f5c 0%, #051030 100%);
     color: white;
@@ -596,7 +564,6 @@ a.toggle-btn:active {
 }
 
 
-/* --- Responsive Queries --- */
 @media (max-width: 768px) {
     .features {
         grid-template-columns: repeat(2, 1fr);
@@ -653,7 +620,6 @@ a.toggle-btn:active {
     }
 }
 
-/* --- Chat Widget --- */
 .chat-widget {
     position: fixed;
     bottom: 2rem;

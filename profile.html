@@ -9,24 +9,21 @@
 </head>
 
 <body>
-    <div class="dashboard full-width">
-        <nav class="dashboard-header"
-            style="position: sticky; top: 0; z-index: 1000; background: linear-gradient(247deg, #62b76a 0%, #000000 100%); padding: 1.5rem 2rem; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);">
-            <div>
-                <h1 style="font-size: 1.8rem; margin-bottom: 0.2rem; color: white;" id="profileHeaderName"> Hey Your Profile
-                </h1>
-                <p class="subtitle" style="margin-bottom: 0; text-align: left; font-size: 0.85rem; color: #e2e8f0;">
-                    Manage your
-                    CrowdCivics account details.</p>
-            </div>
-            <nav class="header-nav">
-                <a href="dashboard.html" class="nav-link">Dashboard</a>
-                <a href="dashboard.html#myReportsSection" class="nav-link">My Reports</a>
-                <a href="dashboard.html#analyticsSection" class="nav-link">City Overview</a>
-                <a href="report.html" class="nav-link">Report Issue</a>
-                <button id="logoutBtn" class="btn-secondary">Logout</button>
-            </nav>
+    <nav class="dashboard-header">
+        <div>
+            <h1 style="font-size: 1.8rem; margin-bottom: 0.2rem; color: white;" id="profileHeaderName">Your Profile
+            </h1>
+            <p class="subtitle" style="margin-bottom: 0; text-align: left; font-size: 0.85rem; color: #cbd5e1;">
+                Manage your CrowdCivics account details.</p>
+        </div>
+        <nav class="header-nav" style="display: flex; gap: 1rem; align-items: center;">
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <a href="report.html" class="nav-link">Report Issue</a>
+            <button id="logoutBtn" class="btn-secondary" style="padding: 0.5rem 1rem;">Logout</button>
         </nav>
+    </nav>
+
+    <div class="dashboard full-width">
 
         <div class="dashboard-grid">
 
@@ -101,52 +98,52 @@
                 </form>
             </div>
 
-        </div> <!-- Close dashboard-grid -->
 
-        <div id="message" class="message"></div>
-    </div>
-
-    <div class="chat-widget">
-        <button id="chatToggle" class="chat-toggle">Chat</button>
-        <div id="chatWindow" class="chat-window" aria-hidden="true">
-            <div class="chat-header">
-                <span>CrowdCivics Assistant</span>
-                <button id="chatClose" class="chat-close">&times;</button>
-            </div>
-            <div id="chatMessages" class="chat-messages"></div>
-            <form id="chatForm" class="chat-form">
-                <input id="chatInput" type="text" class="chat-input" placeholder="Ask about your account or reports..."
-                    autocomplete="off" />
-                <button type="submit" class="chat-send">Send</button>
-            </form>
+            <div id="message" class="message"></div>
         </div>
-    </div>
 
-    <footer class="dashboard-footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h4>CrowdCivics</h4>
-                <p>Empowering citizens to effectively report, track, and resolve civic issues in your neighborhood.</p>
-            </div>
-            <div class="footer-section">
-                <h4>Quick Links</h4>
-                <a href="dashboard.html#myReportsSection">My Reports</a>
-                <a href="dashboard.html#analyticsSection">City Overview</a>
-                <a href="profile.html">Profile Settings</a>
-            </div>
-            <div class="footer-section">
-                <h4>Contact Support</h4>
-                <p>Email: support@crowdcivics.com</p>
-                <p>Phone: 1-800-CIVICS</p>
-                <p>Hours: Mon-Fri, 9am - 5pm</p>
+        <div class="chat-widget">
+            <button id="chatToggle" class="chat-toggle">Chat</button>
+            <div id="chatWindow" class="chat-window" aria-hidden="true">
+                <div class="chat-header">
+                    <span>CrowdCivics Assistant</span>
+                    <button id="chatClose" class="chat-close">&times;</button>
+                </div>
+                <div id="chatMessages" class="chat-messages"></div>
+                <form id="chatForm" class="chat-form">
+                    <input id="chatInput" type="text" class="chat-input"
+                        placeholder="Ask about your account or reports..." autocomplete="off" />
+                    <button type="submit" class="chat-send">Send</button>
+                </form>
             </div>
         </div>
-        <div class="footer-bottom">
-            <p>&copy; 2026 CrowdCivics. All rights reserved. | <a href="#">Terms & Privacy</a></p>
-        </div>
-    </footer>
 
-    <script src="main.js"></script>
+        <footer class="dashboard-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>CrowdCivics</h4>
+                    <p>Empowering citizens to effectively report, track, and resolve civic issues in your neighborhood.
+                    </p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <a href="dashboard.html#myReportsSection">My Reports</a>
+                    <a href="dashboard.html#analyticsSection">City Overview</a>
+                    <a href="profile.html">Profile Settings</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact Support</h4>
+                    <p>Email: support@crowdcivics.com</p>
+                    <p>Phone: 1-800-CIVICS</p>
+                    <p>Hours: Mon-Fri, 9am - 5pm</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 CrowdCivics. All rights reserved. | <a href="#">Terms & Privacy</a></p>
+            </div>
+        </footer>
+
+        <script src="main.js"></script>
 </body>
 
 </html>

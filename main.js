@@ -80,21 +80,18 @@ function initializeNotifications() {
         e.stopPropagation();
         dropdown.classList.toggle('show');
 
-        // Hide badge when notifications are checked and update last check time
         if (dropdown.classList.contains('show')) {
             if (badge) badge.style.display = 'none';
             localStorage.setItem('lastNotificationCheck', new Date().toISOString());
         }
     });
 
-    // Close when clicking outside
     document.addEventListener('click', (e) => {
         if (!bellBtn.contains(e.target) && dropdown.classList.contains('show')) {
             dropdown.classList.remove('show');
         }
     });
 
-    // Prevent closing when clicking inside the dropdown
     dropdown.addEventListener('click', (e) => {
         e.stopPropagation();
     });
@@ -112,12 +109,10 @@ async function fetchAndDisplayNotifications(userId) {
 
         const issues = await response.json();
 
-        // Filter for RESOLVED or REJECTED issues
         const notificationIssues = issues.filter(issue =>
             issue.status === 'RESOLVED' || issue.status === 'REJECTED'
         );
 
-        // Sort by updatedAt descending
         notificationIssues.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
         const lastCheckStr = localStorage.getItem('lastNotificationCheck');
@@ -152,7 +147,6 @@ async function fetchAndDisplayNotifications(userId) {
                     descHtml = `Your report "${issue.title}" was rejected. ${issue.rejectionReason ? '<br>Reason: ' + issue.rejectionReason : ''}`;
                 }
 
-                // Format time nicely
                 const timeStr = updatedTime.toLocaleDateString() + ' ' + updatedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 htmlContent += `
@@ -381,7 +375,6 @@ if (document.getElementById('registerFormElement')) {
         });
     }
 
-    // Toggle Government ID field based on user type buttons
     const customerBtn = document.getElementById('customerBtn');
     const sellerBtn = document.getElementById('sellerBtn');
     const adminIdGroup = document.getElementById('adminIdGroup');
@@ -490,7 +483,6 @@ if (document.getElementById('registerFormElement')) {
                     const loginToggle = document.getElementById('loginToggle');
                     if (loginToggle) {
                         loginToggle.click();
-                        // Reset form
                         document.getElementById('registerFormElement').reset();
                         if (otpGroup) otpGroup.style.display = 'none';
                         if (sendOtpBtn) {
@@ -516,7 +508,6 @@ if (document.getElementById('registerFormElement')) {
     });
 }
 
-// Login Role Toggle Logic
 const loginCustomerBtn = document.getElementById('loginCustomerBtn');
 const loginSellerBtn = document.getElementById('loginSellerBtn');
 const loginEmailLabel = document.getElementById('loginEmailLabel');
@@ -928,47 +919,6 @@ function initializeChatBot() {
         addMessage(text, 'bot');
     }
 
-    function getBotReply(text) {
-        const t = text.toLowerCase();
-
-        // Friendly greetings
-        if (t === 'hi' || t === 'hello' || t === 'hey' || t.includes('hey there')) {
-            return "Hey there! 👋 I'm your friendly neighborhood CrowdCivics bot. How's it going today? Need any help with reporting issues or checking your profile?";
-        }
-        if (t.includes('how are you') || t.includes('whats up') || t.includes("what's up")) {
-            return "I'm doing great, thanks for asking! 😊 Just hanging out here waiting to help you make our city better. What's on your mind?";
-        }
-        if (t.includes('thanks') || t.includes('thank you')) {
-            return "You're very welcome! Let me know if you need anything else. Have an awesome day! 🌟";
-        }
-        if (t === 'bye' || t === 'goodbye' || t.includes('see ya')) {
-            return "Catch you later! Keep up the great work in the community! 👋";
-        }
-
-        // Feature-specific friendly responses
-        if (t.includes('register') || t.includes('sign up') || t.includes('account')) {
-            return "Getting set up is super easy! Just head over to the landing page, hit 'Create Account', pop in your details and verify your OTP. You'll be ready to go in no time! 🚀";
-        }
-        if (t.includes('login') || t.includes('sign in')) {
-            return "Just hop over to the Login page and use your email and password. Once you're in, we'll take you straight to your dashboard! 🔑";
-        }
-        if (t.includes('report') || t.includes('issue') || t.includes('problem')) {
-            return "Spotted a problem? No worries! 🛠️ Just go to 'Report Issue' on your dashboard. Tell us what's wrong, add a photo if you have one, pin the location, and hit submit. We'll take it from there!";
-        }
-        if (t.includes('status') || t.includes('track') || t.includes('progress')) {
-            return "Curious about your reports? 🕵️‍♂️ You can track them all in the 'My Reports' section on your dashboard. We'll keep you posted if the status is NEW, IN_PROGRESS, or RESOLVED!";
-        }
-        if (t.includes('analytics') || t.includes('overview') || t.includes('statistics') || t.includes('chart')) {
-            return "Oh, you want the big picture? 📊 Check out the 'City Overview' section! It shows you all the cool stats like total issues reported, how quickly we're fixing things, and what types of issues are common down your street.";
-        }
-        if (t.includes('profile') || t.includes('name') || t.includes('phone') || t.includes('email')) {
-            return "Your profile is where you keep all your personal details up to date! 👤 We attach this info to your reports so the city staff knows who the local hero is and can contact you if they need to.";
-        }
-
-        // Friendly fallback
-        return "I'm still learning, so I might not understand everything perfectly yet! 😅 But I'm great at helping with registration, logging in, reporting issues, or checking analytics. Want to chat about one of those?";
-    }
-
     chatToggle.addEventListener('click', () => {
         if (chatWindow.classList.contains('open')) {
             closeChat();
@@ -991,11 +941,53 @@ function initializeChatBot() {
         addMessage(text, 'user');
         chatInput.value = '';
 
-        const reply = getBotReply(text);
+        const reply = window.getBotReply(text);
         setTimeout(() => {
             addBotMessage(reply);
         }, 300);
     });
+}
+
+window.getBotReply = function (text) {
+    const t = text.toLowerCase();
+
+    if (t === 'hi' || t === 'hello' || t === 'hey' || t.includes('hey there')) {
+        return "Hey there! 👋 I'm your friendly neighborhood CrowdCivics bot. How's it going today? Need any help with reporting issues or checking your profile?";
+    }
+    if (t.includes('how are you') || t.includes('whats up') || t.includes("what's up")) {
+        return "I'm doing great, thanks for asking! 😊 Just hanging out here waiting to help you make our city better. What's on your mind?";
+    }
+    if (t.includes('thanks') || t.includes('thank you')) {
+        return "You're very welcome! Let me know if you need anything else. Have an awesome day! 🌟";
+    }
+    if (t === 'bye' || t === 'goodbye' || t.includes('see ya')) {
+        return "Catch you later! Keep up the great work in the community! 👋";
+    }
+
+    if (t.includes('register the issue') || t.includes('how to report') || t.includes('submit an issue')) {
+        return "Reporting an issue is easy! 🛠️ First, sign in to your account. Then go to your Dashboard and click on 'Report Issue'. Fill in the title, description, category, and location. You can even upload a photo to help the authorities understand the problem better. Once submitted, you can track its progress in real-time!";
+    }
+
+    if (t.includes('register') || t.includes('sign up') || t.includes('account')) {
+        return "Getting set up is super easy! Just head over to the landing page, hit 'Create Account', pop in your details and verify your OTP. You'll be ready to go in no time! 🚀";
+    }
+    if (t.includes('login') || t.includes('sign in')) {
+        return "Just hop over to the Login page and use your email and password. Once you're in, we'll take you straight to your dashboard! 🔑";
+    }
+    if (t.includes('report') || t.includes('issue') || t.includes('problem')) {
+        return "Spotted a problem? No worries! 🛠️ Just sign in and go to 'Report Issue' on your dashboard. Tell us what's wrong, add a photo if you have one, pin the location, and hit submit. We'll take it from there!";
+    }
+    if (t.includes('status') || t.includes('track') || t.includes('progress')) {
+        return "Curious about your reports? 🕵️‍♂️ You can track them all in the 'My Reports' section on your dashboard after you sign in. We'll keep you posted if the status is NEW, IN_PROGRESS, or RESOLVED!";
+    }
+    if (t.includes('analytics') || t.includes('overview') || t.includes('statistics') || t.includes('chart')) {
+        return "Oh, you want the big picture? 📊 Check out the 'City Overview' section! It shows you all the cool stats like total issues reported, how quickly we're fixing things, and what types of issues are common down your street.";
+    }
+    if (t.includes('profile') || t.includes('name') || t.includes('phone') || t.includes('email')) {
+        return "Your profile is where you keep all your personal details up to date! 👤 We attach this info to your reports so the city staff knows who the local hero is and can contact you if they need to.";
+    }
+
+    return "I'm still learning, so I might not understand everything perfectly yet! 😅 But I'm great at helping with registration, logging in, reporting issues, or checking analytics. Want to chat about one of those?";
 }
 
 function isValidEmail(email) {
@@ -1141,7 +1133,6 @@ function initReportPage() {
                 if (data.ai_probability > 5) {
                     alert("edited by using ai");
                     if (p) p.textContent = `📸 Click to take a photo or upload`;
-                    fileInput.value = ""; // Reset file input
                     if (imagePreview) {
                         imagePreview.src = "";
                         imagePreview.style.display = 'none';
@@ -1154,7 +1145,6 @@ function initReportPage() {
             }
         } catch (error) {
             console.error("Error connecting to AI image detector:", error);
-            // Decide if you want to block upload if service is down. For now, we proceed.
         }
 
         const reader = new FileReader();
@@ -1276,7 +1266,6 @@ function initDashboardPage() {
             return;
         }
 
-        // Sort by date descending
         issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         window.dashboardIssues = issues;
 
@@ -1293,7 +1282,6 @@ function initDashboardPage() {
 
             if (issue.status === 'RESOLVED' || issue.status === 'REJECTED') {
                 if (issue.rating != null) {
-                    // Show existing feedback
                     let stars = '';
                     for (let i = 1; i <= 5; i++) {
                         stars += i <= issue.rating ? '★' : '☆';
@@ -1305,7 +1293,6 @@ function initDashboardPage() {
                         ${issue.feedback ? `<p style="margin: 0; font-size: 0.9rem; color: #475569;">"${escapeHtml(issue.feedback)}"</p>` : ''}
                     </div>`;
                 } else {
-                    // Show feedback form for resolved/rejected statuses
                     feedbackHtml = `
                     <div class="feedback-section" style="margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                         <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">Rate Experience</h4>
@@ -1400,7 +1387,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initReportPage();
     }
 
-    // Password Toggle Logic
     const toggleLoginPassword = document.getElementById('toggleLoginPassword');
     const loginPassword = document.getElementById('loginPassword');
 
@@ -1424,7 +1410,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Feedback functionality
 window.setRating = function (issueId, rating) {
     const starContainer = document.getElementById(`star-rating-${issueId}`);
     if (!starContainer) return;

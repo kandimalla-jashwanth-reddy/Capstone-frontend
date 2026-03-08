@@ -1,11 +1,12 @@
 header {
-    background: var(--primary-gradient);
+    background: var(--primary-navy);
     color: white;
     padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: var(--shadow-md);
+    border-bottom: 2px solid var(--primary-color);
 }
 
 header button {

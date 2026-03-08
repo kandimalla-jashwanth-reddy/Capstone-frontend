@@ -12,7 +12,6 @@
 
 <body class="auth-page">
 
-    <!-- Registration Form -->
     <div class="form-section">
         <div class="form-container">
             <div class="form active" id="registerForm">
@@ -23,14 +22,12 @@
                     <Div>Select who are you:</Div>
                     <div class="user-type-buttons">
                         <button class="user-type-btn active" id="customerBtn">
-                            <i class="fas fa-user"></i> Citezen
+                            <i class="fas fa-user"></i> Citizen
                         </button>
                         <button class="user-type-btn" id="sellerBtn">
                             <i class="fas fa-store"></i> Municipal Staff
                         </button>
                     </div>
-
-
 
                     <div class="input-group" id="adminIdGroup" style="display: none;">
                         <label class="input-label" for="adminId">Government Unique ID</label>
@@ -60,21 +57,21 @@
                             <input type="email" id="registerEmail" class="input-field" placeholder="you@example.com"
                                 required style="flex: 1;">
                             <button type="button" id="sendOtpBtn"
-                                style="padding: 0 15px; border-radius: 12px; border: 1px solid #e0e7ff; background: #fff; cursor: pointer; font-weight: 600; color: #1a3a8f;">Send
+                                style="padding: 0 15px; border-radius: 12px; border: 1px solid #f5c518; background: #f5c518; cursor: pointer; font-weight: 600; color: #0b1628;">Send
                                 OTP</button>
                         </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label" for="mobileNumber">Mobile Number</label>
-                        <input type="tel" id="mobileNumber" class="input-field" placeholder="Enter your mobile number"
-                            required>
                     </div>
 
                     <div class="input-group" id="otpGroup" style="display: none;">
                         <label class="input-label" for="otpInput">Enter OTP</label>
                         <input type="text" id="otpInput" class="input-field" placeholder="Enter 6-digit OTP"
                             maxlength="6">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" for="mobileNumber">Mobile Number</label>
+                        <input type="tel" id="mobileNumber" class="input-field" placeholder="Enter your mobile number"
+                            required>
                     </div>
 
                     <div class="input-group">
@@ -105,7 +102,7 @@
 
 
                 <div class="form-footer">
-                    Already have an account? <a href="login.html" id="switchToLogin" target="_blank">Sign in here</a>
+                    Already have an account? <a href="login.html" id="switchToLogin">Sign in here</a>
                 </div>
             </div>
         </div>

@@ -1,4 +1,3 @@
-// DOM Elements
 const loginToggle = document.getElementById('loginToggle');
 const registerToggle = document.getElementById('registerToggle');
 const loginForm = document.getElementById('loginForm');
@@ -12,7 +11,6 @@ const registerPassword = document.getElementById('registerPassword');
 const loginFormElement = document.getElementById('loginFormElement');
 const registerFormElement = document.getElementById('registerFormElement');
 
-// Toggle between Login and Register forms
 loginToggle.addEventListener('click', () => {
     loginToggle.classList.add('active');
     registerToggle.classList.remove('active');
@@ -37,7 +35,6 @@ switchToLogin.addEventListener('click', (e) => {
     loginToggle.click();
 });
 
-// Toggle password visibility
 toggleLoginPassword.addEventListener('click', () => {
     const type = loginPassword.getAttribute('type') === 'password' ? 'text' : 'password';
     loginPassword.setAttribute('type', type);
@@ -50,12 +47,7 @@ toggleRegisterPassword.addEventListener('click', () => {
     toggleRegisterPassword.innerHTML = type === 'password' ? '<i class="far fa-eye"></i>' : '<i class="far fa-eye-slash"></i>';
 });
 
-// Form submission
-// Form submission logic moved to main.js for backend integration
-// loginFormElement.addEventListener('submit', ...);
-// registerFormElement.addEventListener('submit', ...);
 
-// Auto-focus on the first input field when switching forms
 loginToggle.addEventListener('click', () => {
     setTimeout(() => document.getElementById('loginEmail').focus(), 300);
 });
@@ -64,11 +56,8 @@ registerToggle.addEventListener('click', () => {
     setTimeout(() => document.getElementById('registerName').focus(), 300);
 });
 
-// Initialize with login form focused
-// Initialize with login form focused
 document.getElementById('loginEmail').focus();
 
-// Navigation Header Buttons
 const navSignInBtn = document.getElementById('navSignInBtn');
 const navSignUpBtn = document.getElementById('navSignUpBtn');
 

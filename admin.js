@@ -44,13 +44,26 @@ async function loadAdminProfile() {
             const emailEl = document.getElementById('adminEmail');
             const idEl = document.getElementById('adminId');
             const deptEl = document.getElementById('adminDepartment');
+            const headerNameEl = document.getElementById('headerAdminName');
 
             if (nameEl) nameEl.textContent = user.name || 'Unknown';
             if (emailEl) emailEl.textContent = user.email || 'Unknown';
             if (deptEl) deptEl.textContent = user.department || 'Not Assigned';
             if (idEl) idEl.textContent = user.adminId || 'Not Applicable';
+
+            if (headerNameEl) {
+                const displayName = user.name || user.email.split('@')[0] || 'Admin';
+                headerNameEl.textContent = `Welcome, ${displayName}`;
+                console.log('Admin header updated to:', headerNameEl.textContent);
+            }
         } else {
             console.error('Failed to load admin profile data.');
+            const headerNameEl = document.getElementById('headerAdminName');
+            if (headerNameEl) {
+                const savedEmail = localStorage.getItem('userEmail');
+                const displayName = savedEmail ? savedEmail.split('@')[0] : 'Admin';
+                headerNameEl.textContent = `Welcome, ${displayName}`;
+            }
         }
     } catch (error) {
         console.error('Error fetching admin profile:', error);
@@ -88,11 +101,21 @@ function renderIssuesTable(issues) {
         const tr = document.createElement('tr');
 
         let locationHtml = escapeHtml(issue.address) || 'N/A';
-        if (issue.latitude && issue.longitude) {
-            const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${issue.latitude},${issue.longitude}`;
-            locationHtml = `<a href="${mapsUrl}" target="_blank" style="color: #2563eb; text-decoration: underline;">📍 Map</a><br><span style="font-size: 0.85em; color: #64748b;">${escapeHtml(issue.address) || ''}</span>`;
-        } else if (issue.latitude) {
-            locationHtml = '📍 Map';
+        const destination = (issue.latitude && issue.longitude)
+            ? `${issue.latitude},${issue.longitude}`
+            : (issue.address ? encodeURIComponent(issue.address) : null);
+
+        if (destination) {
+            const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+            locationHtml = `
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <span style="font-weight: 500;">${escapeHtml(issue.address) || 'Address Missing'}</span>
+                    <a href="${mapsUrl}" target="_blank" class="btn-primary" 
+                       style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 0.8rem; padding: 5px 10px; text-decoration: none; border-radius: 4px;">
+                        <i class="fas fa-route"></i> Get Route
+                    </a>
+                </div>
+            `;
         }
 
         const dateReported = issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'Unknown';
@@ -168,7 +191,6 @@ async function updateIssueStatus(id) {
     if (newStatus === 'REJECTED') {
         const reason = prompt('Please enter the reason for rejecting this issue:');
         if (reason === null) {
-            // User cancelled the prompt
             return;
         }
         if (!reason.trim()) {
