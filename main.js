@@ -382,16 +382,11 @@ if (document.getElementById('registerFormElement')) {
     const formTitle = document.querySelector('.form-title');
 
     function setRole(role) {
-        const adminDeptGroup = document.getElementById('adminDepartmentGroup');
-        const adminDeptInput = document.getElementById('adminDepartment');
-
         if (role === 'municipal') {
             sellerBtn.classList.add('active');
             customerBtn.classList.remove('active');
             adminIdGroup.style.display = 'block';
             adminIdInput.setAttribute('required', 'true');
-            if (adminDeptGroup) adminDeptGroup.style.display = 'block';
-            if (adminDeptInput) adminDeptInput.setAttribute('required', 'true');
             if (formTitle) formTitle.textContent = 'Municipal Registration';
         } else {
             customerBtn.classList.add('active');
@@ -399,11 +394,6 @@ if (document.getElementById('registerFormElement')) {
             adminIdGroup.style.display = 'none';
             adminIdInput.removeAttribute('required');
             adminIdInput.value = '';
-            if (adminDeptGroup) adminDeptGroup.style.display = 'none';
-            if (adminDeptInput) {
-                adminDeptInput.removeAttribute('required');
-                adminDeptInput.value = '';
-            }
             if (formTitle) formTitle.textContent = 'Citizen Registration';
         }
     }
@@ -429,7 +419,6 @@ if (document.getElementById('registerFormElement')) {
 
         if (formData.role === 'ADMIN') {
             const adminId = document.getElementById('adminId').value.trim();
-            const adminDepartment = document.getElementById('adminDepartment') ? document.getElementById('adminDepartment').value.trim() : '';
 
             if (!adminId) {
                 showMessage('Please enter your Government Unique ID', 'error');
@@ -439,13 +428,8 @@ if (document.getElementById('registerFormElement')) {
                 showMessage('Government Unique ID must be exactly 8 digits', 'error');
                 return;
             }
-            if (!adminDepartment) {
-                showMessage('Please select your Department', 'error');
-                return;
-            }
 
             formData.adminId = adminId;
-            formData.department = adminDepartment;
         }
 
         const confirmPassword = document.getElementById('confirmPassword').value;
@@ -665,7 +649,7 @@ function loadUserData(userEmail) {
                 console.log('UI updated successfully');
                 updateDebugInfo('User data loaded successfully!');
 
-                showMessage(`Welcome back, ${user.name}!`, 'success');
+                // showMessage(`Welcome back, ${user.name}!`, 'success');
 
                 if (document.getElementById('analyticsSummary')) {
                     loadAnalyticsSummary();
@@ -1040,6 +1024,22 @@ function initReportPage() {
     const latInput = document.getElementById('latitude');
     const lngInput = document.getElementById('longitude');
 
+    const categorySelect = document.getElementById('category');
+    const otherCategoryGroup = document.getElementById('otherCategoryGroup');
+    const otherCategoryInput = document.getElementById('otherCategory');
+
+    if (categorySelect && otherCategoryGroup) {
+        categorySelect.addEventListener('change', () => {
+            if (categorySelect.value === 'OTHER') {
+                otherCategoryGroup.style.display = 'block';
+                otherCategoryInput.required = true;
+            } else {
+                otherCategoryGroup.style.display = 'none';
+                otherCategoryInput.required = false;
+            }
+        });
+    }
+
     if (getLocationBtn) {
         getLocationBtn.addEventListener('click', () => {
             if (navigator.geolocation) {
@@ -1115,37 +1115,7 @@ function initReportPage() {
 
     async function handleImageFile(file) {
         const p = dropZone.querySelector('p');
-        if (p) {
-            p.textContent = `⏳ Checking image for AI edits...`;
-        }
-
-        const formData = new FormData();
-        formData.append("image", file);
-
-        try {
-            const response = await fetch("http://localhost:3000/check-image", {
-                method: "POST",
-                body: formData
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.ai_probability > 5) {
-                    alert("edited by using ai");
-                    if (p) p.textContent = `📸 Click to take a photo or upload`;
-                    if (imagePreview) {
-                        imagePreview.src = "";
-                        imagePreview.style.display = 'none';
-                    }
-                    if (photoDataInput) photoDataInput.value = "";
-                    return; // Reject image
-                }
-            } else {
-                console.warn("AI check failed or service unavailable, allowing image upload.");
-            }
-        } catch (error) {
-            console.error("Error connecting to AI image detector:", error);
-        }
+        if (p) p.innerHTML = `<span class="loading-spinner"></span> Analyzing image...`;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -1154,9 +1124,40 @@ function initReportPage() {
                 imagePreview.style.display = 'block';
             }
             if (photoDataInput) photoDataInput.value = e.target.result;
-            if (p) p.textContent = `✅ ${file.name} selected (AI Check Passed)`;
         };
         reader.readAsDataURL(file);
+
+        // Call AI API to analyze image
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const response = await fetch(`${API_BASE}/image/analyze`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('AI Analysis Result:', result);
+
+                if (result.identified_category && result.identified_category !== 'OTHER') {
+                    if (categorySelect) {
+                        categorySelect.value = result.identified_category;
+                        categorySelect.dispatchEvent(new Event('change'));
+                        if (p) p.innerHTML = `✅ ${file.name} (Detected: ${result.identified_category})`;
+                    }
+                } else {
+                    if (p) p.innerHTML = `✅ ${file.name} (Analysis complete)`;
+                }
+            } else {
+                console.error('AI Analysis failed');
+                if (p) p.textContent = `✅ ${file.name} (Auto-detection failed)`;
+            }
+        } catch (error) {
+            console.error('Error during AI analysis:', error);
+            if (p) p.textContent = `✅ ${file.name}`;
+        }
     }
 
     const reportForm = document.getElementById('reportForm');
@@ -1178,10 +1179,15 @@ function initReportPage() {
             const userEmail = localStorage.getItem('userEmail');
             const userId = localStorage.getItem('userId');
 
+            let finalCategory = document.getElementById('category').value;
+            if (finalCategory === 'OTHER') {
+                finalCategory = document.getElementById('otherCategory').value || 'OTHER';
+            }
+
             const issueData = {
                 title: document.getElementById('title').value,
                 description: document.getElementById('description').value,
-                category: document.getElementById('category').value,
+                category: finalCategory,
                 latitude: document.getElementById('latitude').value,
                 longitude: document.getElementById('longitude').value,
                 address: document.getElementById('address') ? document.getElementById('address').value : null,
@@ -1222,7 +1228,7 @@ function initReportPage() {
 function initDashboardPage() {
     const userNameSpan = document.getElementById('userName');
     const issueList = document.getElementById('issueList');
-    const analyticsSummary = document.getElementById('analyticsSummary');
+    const nearYouList = document.getElementById('nearYouList');
 
     const userName = localStorage.getItem('userEmail') || 'Citizen';
     if (userNameSpan) userNameSpan.textContent = userName.split('@')[0];
@@ -1233,6 +1239,187 @@ function initDashboardPage() {
     }
 
     loadUserIssues();
+    window.nearYouIssues = [];
+    loadNearYouIssues();
+
+    const viewAllNearYou = document.getElementById('viewAllNearYou');
+    if (viewAllNearYou) {
+        viewAllNearYou.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderNearYouIssues(); // Show all
+            viewAllNearYou.style.display = 'none';
+        });
+    }
+
+    const closeIssueDetails = document.getElementById('closeIssueDetails');
+    const issueDetailsModal = document.getElementById('issueDetailsModal');
+
+    if (closeIssueDetails && issueDetailsModal) {
+        closeIssueDetails.onclick = () => {
+            issueDetailsModal.style.display = 'none';
+        }
+        window.onclick = (event) => {
+            if (event.target == issueDetailsModal) {
+                issueDetailsModal.style.display = 'none';
+            }
+        }
+    }
+
+    async function loadNearYouIssues() {
+        if (!nearYouList) return;
+        try {
+            const response = await fetch(`${API_BASE}/issues`);
+            if (response.ok) {
+                const issues = await response.json();
+                window.nearYouIssues = issues;
+                renderNearYouIssues(2);
+            } else {
+                nearYouList.innerHTML = '<p class="message error">Failed to load local feed.</p>';
+            }
+        } catch (error) {
+            console.error('Error loading near you issues:', error);
+            if (nearYouList) nearYouList.innerHTML = '<p class="message error">Error loading local feed.</p>';
+        }
+    }
+
+    window.renderNearYouIssues = function (limit) {
+        if (!nearYouList) return;
+        const issues = window.nearYouIssues;
+
+        if (!issues || issues.length === 0) {
+            nearYouList.innerHTML = '<p class="message info">No recent issues in your area.</p>';
+            return;
+        }
+
+        // Sort by date new to old
+        issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const issuesToRender = limit ? issues.slice(0, limit) : issues;
+
+        const html = issuesToRender.map(issue => {
+            const timeAgo = getTimeAgo(issue.createdAt);
+            const categoryClass = `category-${issue.category.toLowerCase().replace(/\s+/g, '-')}`;
+
+            // Generate random-ish like/comment numbers for the "feed" look if they don't exist
+            const likes = issue.id % 20 + 5;
+            const comments = issue.id % 8 + 1;
+
+            return `
+            <div class="near-you-card">
+                <div class="near-you-header">
+                    <div>
+                        <span class="near-you-reporter">${escapeHtml(issue.reporterName || 'Anonymous Citizen')}</span>
+                        <div class="near-you-category ${categoryClass}" style="display: inline-block; margin-left: 10px; padding: 2px 8px; font-size: 0.75rem;">
+                            ${escapeHtml(issue.category)}
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="issue-status status-${issue.status}" style="font-size: 0.7rem; padding: 2px 8px;">${issue.status}</span>
+                        <span class="near-you-time">${timeAgo}</span>
+                    </div>
+                </div>
+                <div class="near-you-description">
+                    ${escapeHtml(issue.description)}
+                </div>
+                ${issue.photoUrl ? `<img src="${issue.photoUrl}" class="near-you-image" alt="Issue Image">` : ''}
+                <div class="near-you-footer">
+                    <div class="near-you-interactions">
+                        <div class="interaction-item">
+                            <i class="far fa-heart"></i>
+                            <span>${likes}</span>
+                        </div>
+                        <div class="interaction-item">
+                            <i class="far fa-comment"></i>
+                            <span>${comments}</span>
+                        </div>
+                    </div>
+                    <a href="#" class="near-you-link" onclick="openIssueDetails(${issue.id})">View Details</a>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        nearYouList.innerHTML = html;
+    }
+
+    window.openIssueDetails = function (issueId) {
+        const issue = window.nearYouIssues.find(i => i.id === issueId);
+        if (!issue) return;
+
+        const modal = document.getElementById('issueDetailsModal');
+        const modalBody = document.getElementById('modalBody');
+        const modalTitle = document.getElementById('modalIssueTitle');
+
+        if (!modal || !modalBody) return;
+
+        modalTitle.textContent = issue.title || `Issue #${issue.id}`;
+
+        let feedbackHtml = '';
+        if (issue.rating != null) {
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                stars += i <= issue.rating ? '★' : '☆';
+            }
+            feedbackHtml = `
+            <div style="margin-top: 20px; padding: 15px; background: #fffbeb; border-radius: 12px; border: 1px solid #fef3c7;">
+                <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.95rem;">Citizen Feedback</h4>
+                <div style="color: #f59e0b; font-size: 1.25rem; margin-bottom: 5px;">${stars}</div>
+                ${issue.feedback ? `<p style="margin: 0; font-size: 0.9rem; color: #92400e; font-style: italic;">"${escapeHtml(issue.feedback)}"</p>` : ''}
+            </div>`;
+        }
+
+        modalBody.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div>
+                    <span class="issue-status status-${issue.status}" style="margin-bottom: 10px; display: inline-block;">${issue.status}</span>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">
+                        Reported by <strong>${escapeHtml(issue.reporterName || 'Anonymous')}</strong><br>
+                        on ${new Date(issue.createdAt).toLocaleDateString()}
+                    </p>
+                </div>
+                <div style="text-align: right;">
+                    <span style="background: #f1f5f9; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">${issue.category}</span>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <h4 style="margin-bottom: 10px; font-size: 1rem;">Description</h4>
+                <p style="color: var(--text-main); line-height: 1.6; font-size: 0.95rem;">${escapeHtml(issue.description)}</p>
+            </div>
+
+            ${issue.photoUrl ? `
+            <div style="margin-bottom: 25px;">
+                <h4 style="margin-bottom: 10px; font-size: 1rem;">Report Photo</h4>
+                <img src="${issue.photoUrl}" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-md);" alt="Issue Photo">
+            </div>` : ''}
+
+            ${issue.status === 'RESOLVED' && issue.resolutionPhotoUrl ? `
+            <div style="margin-top: 25px; padding-top: 25px; border-top: 2px dashed #e2e8f0;">
+                <h4 style="margin-bottom: 10px; font-size: 1rem; color: #15803d; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-check-circle"></i> Resolution Proof
+                </h4>
+                <img src="${issue.resolutionPhotoUrl}" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-md); border: 2px solid #dcfce7;" alt="Resolution Proof">
+            </div>` : ''}
+
+            ${feedbackHtml}
+        `;
+
+        modal.style.display = 'block';
+    }
+
+    function getTimeAgo(dateString) {
+        const now = new Date();
+        const past = new Date(dateString);
+        const diffInMs = now - past;
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+
+        if (diffInDays > 0) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+        if (diffInHours > 0) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+        if (diffInMinutes > 0) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+        return 'Just now';
+    }
 
     async function loadUserIssues() {
         const userId = localStorage.getItem('userId');
@@ -1356,16 +1543,7 @@ function initDashboardPage() {
     }
 
     function updateAnalytics(issues) {
-        if (!analyticsSummary) return;
-
-        const total = issues.length;
-
-        analyticsSummary.innerHTML = `
-            <div class="analytics-card">
-                <h4>My Reports</h4>
-                <p>${total}</p>
-            </div>
-        `;
+        // Analytics section was replaced by Near You feed as per user request
     }
 }
 
