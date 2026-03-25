@@ -7,6 +7,7 @@ header {
     align-items: center;
     box-shadow: var(--shadow-md);
     border-bottom: 2px solid var(--primary-color);
+    margin-bottom: 2rem;
 }
 
 header h2,
@@ -28,6 +29,13 @@ header button {
 header button:hover {
     background: white;
     color: var(--primary-color);
+}
+
+.active-nav {
+    background-color: #f5c518 !important; /* Gold/Yellow */
+    color: #1e293b !important;
+    border-color: #f5c518 !important;
+    box-shadow: 0 0 10px rgba(245, 197, 24, 0.4);
 }
 
 .dashboard {

@@ -218,6 +218,39 @@ p {
     background-color: #fff;
 }
 
+.input-error {
+    border-color: var(--danger-color) !important;
+    background-color: #fff1f2 !important;
+}
+
+.message {
+    display: none;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+.message.info {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.message.success {
+    background-color: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.message.error {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
 .btn-primary {
     width: 100%;
     display: inline-flex;
@@ -272,7 +305,7 @@ p {
 .dashboard.full-width {
     max-width: 100%;
     margin: 0;
-    padding: 2rem;
+    padding: 1rem;
     border-radius: 0;
     border: none;
     min-height: 100vh;
@@ -482,13 +515,17 @@ p {
     box-shadow: var(--shadow-sm);
 }
 
+.card h2 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    letter-spacing: -0.05em;
+}
+
 .issue-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
     align-items: flex-start;
-    max-height: 600px;
-    overflow-y: auto;
     padding-right: 5px;
 }
 
@@ -520,7 +557,7 @@ p {
 .issue-title {
     font-weight: 600;
     color: var(--text-main);
-    font-size: 1.1rem;
+    font-size: 1.5rem;
     word-break: break-word;
     padding-right: 10px;
 }
@@ -595,14 +632,15 @@ p {
 }
 
 .issue-meta {
-    font-size: 0.85rem;
+    font-size: 1.1rem;
     color: var(--text-muted);
     margin-bottom: 0.5rem;
 }
 
 .issue-description {
     flex-grow: 1;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
+    font-size: 1.1rem;
 }
 
 .chat-widget {
@@ -1793,19 +1831,19 @@ body.auth-page {
 .near-you-reporter {
     font-weight: 700;
     color: var(--text-main);
-    font-size: 1.1rem;
+    font-size: 1.3rem;
 }
 
 .near-you-time {
     color: #64748b;
-    font-size: 0.85rem;
+    font-size: 1rem;
 }
 
 .near-you-category {
     display: inline-block;
-    padding: 0.25rem 0.75rem;
+    padding: 0.35rem 1rem;
     border-radius: 0.75rem;
-    font-size: 0.8rem;
+    font-size: 1rem;
     font-weight: 600;
     margin-bottom: 1rem;
     width: fit-content;
@@ -1839,7 +1877,7 @@ body.auth-page {
 
 .near-you-description {
     color: #334155;
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     margin-bottom: 1rem;
     line-height: 1.5;
 }
@@ -1862,7 +1900,7 @@ body.auth-page {
     display: flex;
     gap: 1.5rem;
     color: #64748b;
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
 
 .interaction-item {
@@ -1879,7 +1917,7 @@ body.auth-page {
     color: #4f46e5;
     text-decoration: none;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1.1rem;
 }
 
 .near-you-link:hover {
@@ -1916,3 +1954,21 @@ body.auth-page {
         transform: rotate(360deg);
     }
 }
+
+.status-accepted {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.status-rejected {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.verification-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-right: 8px;
+}

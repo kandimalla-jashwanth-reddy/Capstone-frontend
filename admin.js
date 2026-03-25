@@ -1,4 +1,6 @@
 const API_BASE = 'http://localhost:8080/api';
+let allIssues = [];
+let currentView = 'ALL';
 
 document.addEventListener('DOMContentLoaded', function () {
     const userRole = localStorage.getItem('userRole');
@@ -10,16 +12,118 @@ document.addEventListener('DOMContentLoaded', function () {
 
     loadAdminProfile();
     loadIssues();
+    updateActiveBtn('btnActive'); // Set initial active button
 });
 
-function toggleAdminProfile() {
-    const profileDiv = document.querySelector('.user-info');
-    if (profileDiv) {
-        if (profileDiv.style.display === 'none' || !profileDiv.style.display) {
-            profileDiv.style.display = 'block';
-        } else {
-            profileDiv.style.display = 'none';
+function updateActiveBtn(activeId) {
+    const buttons = ['btnActive', 'btnResolved', 'btnProfile'];
+    buttons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            if (id === activeId) {
+                btn.classList.add('active-nav');
+            } else {
+                btn.classList.remove('active-nav');
+            }
         }
+    });
+}
+
+function toggleAdminProfile() {
+    updateActiveBtn('btnProfile');
+    const profileDiv = document.querySelector('.user-info');
+    const issuesSection = document.getElementById('issuesSection');
+    if (profileDiv) {
+        profileDiv.style.display = 'block';
+        if (issuesSection) issuesSection.style.display = 'none';
+    }
+}
+
+async function updateAdminPassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const messageEl = document.getElementById('passwordMessage');
+    const email = localStorage.getItem('userEmail');
+
+    if (newPassword !== confirmPassword) {
+        messageEl.style.color = 'red';
+        messageEl.textContent = 'New passwords do not match!';
+        return;
+    }
+
+    const btn = document.getElementById('updatePasswordBtn');
+    btn.disabled = true;
+    btn.textContent = 'Updating...';
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/update-password`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: email,
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            })
+        });
+
+        if (response.ok) {
+            messageEl.style.color = 'green';
+            messageEl.textContent = 'Password updated successfully!';
+            document.getElementById('updatePasswordForm').reset();
+        } else {
+            const error = await response.text();
+            messageEl.style.color = 'red';
+            messageEl.textContent = error || 'Update failed.';
+        }
+    } catch (err) {
+        messageEl.style.color = 'red';
+        messageEl.textContent = 'Connection error.';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Update Password';
+    }
+}
+
+function showActiveIssues() {
+    updateActiveBtn('btnActive');
+    currentView = 'ACTIVE';
+    const profileDiv = document.querySelector('.user-info');
+    const issuesSection = document.getElementById('issuesSection');
+    if (profileDiv) profileDiv.style.display = 'none';
+    if (issuesSection) issuesSection.style.display = 'block';
+
+    const activeIssues = allIssues.filter(i => i.status === 'NEW' || i.status === 'IN_PROGRESS');
+    renderIssuesTable(activeIssues);
+
+    const subTitle = document.querySelector('#issuesSection h3');
+    if (subTitle) subTitle.textContent = 'Active Civic Issues';
+}
+
+function showResolvedIssues() {
+    updateActiveBtn('btnResolved');
+    currentView = 'RESOLVED';
+    const profileDiv = document.querySelector('.user-info');
+    const issuesSection = document.getElementById('issuesSection');
+    if (profileDiv) profileDiv.style.display = 'none';
+    if (issuesSection) issuesSection.style.display = 'block';
+
+    const resolvedIssues = allIssues.filter(i => i.status === 'RESOLVED' || i.status === 'REJECTED');
+    renderIssuesTable(resolvedIssues);
+
+    const subTitle = document.querySelector('#issuesSection h3');
+    if (subTitle) subTitle.textContent = 'Resolved & Rejected Civic Issues';
+}
+
+function refreshCurrentView() {
+    if (currentView === 'ACTIVE') {
+        showActiveIssues();
+    } else if (currentView === 'RESOLVED') {
+        showResolvedIssues();
+    } else {
+        renderIssuesTable(allIssues);
+        const subTitle = document.querySelector('#issuesSection h3');
+        if (subTitle) subTitle.textContent = 'Reported Civic Issues';
     }
 }
 
@@ -74,8 +178,8 @@ async function loadIssues() {
     try {
         const response = await fetch(`${API_BASE}/issues`);
         if (response.ok) {
-            const issues = await response.json();
-            renderIssuesTable(issues);
+            allIssues = await response.json();
+            refreshCurrentView();
         } else {
             console.error('Failed to load issues');
             alert('Failed to load issues from the server.');
@@ -126,6 +230,7 @@ function renderIssuesTable(issues) {
 
         tr.innerHTML = `
             <td>#${issue.id}</td>
+            <td>${issue.reporterId || 'N/A'}</td>
             <td>${dateReported}</td>
             <td>${escapeHtml(issue.title)}</td>
             <td>${issue.category}</td>
@@ -216,6 +321,7 @@ async function updateIssueStatus(id) {
 
         if (response.ok) {
             alert(`Issue #${id} updated to ${newStatus}`);
+            loadIssues(); // Refresh data
         } else {
             const text = await response.text();
             alert(`Failed to update status: ${text}`);

@@ -53,7 +53,7 @@
                 <label for="address">Location / Address</label>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <input type="text" id="address" name="address"
-                        placeholder="Enter manual address or use GPS button below"
+                        placeholder="Detected address will appear here or enter manually"
                         style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">
                     <button type="button" id="getLocationBtn" class="btn-secondary"
                         style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -61,7 +61,7 @@
                     </button>
                 </div>
                 <div id="locationInfo" class="location-info">
-                    <span>Target Acquired:</span> <span id="coords"></span>
+                    <span>Detected Location:</span> <span id="coords"></span>
                 </div>
                 <input type="hidden" id="latitude" name="latitude">
                 <input type="hidden" id="longitude" name="longitude">

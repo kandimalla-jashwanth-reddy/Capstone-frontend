@@ -3,7 +3,7 @@ const API_BASE = 'http://localhost:8080/api';
 function showMessage(message, type = 'info') {
     const messageDiv = document.getElementById('message');
     if (messageDiv) {
-        messageDiv.textContent = message;
+        messageDiv.innerHTML = message;
         messageDiv.className = `message ${type}`;
         messageDiv.style.display = 'block';
 
@@ -110,10 +110,15 @@ async function fetchAndDisplayNotifications(userId) {
         const issues = await response.json();
 
         const notificationIssues = issues.filter(issue =>
-            issue.status === 'RESOLVED' || issue.status === 'REJECTED'
+            ['RESOLVED', 'REJECTED', 'IN_PROGRESS', 'NEW'].includes(issue.status)
         );
 
-        notificationIssues.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        // Sort by the latest update time
+        notificationIssues.sort((a, b) => {
+            const timeA = new Date(a.updatedAt || a.resolvedAt || a.createdAt);
+            const timeB = new Date(b.updatedAt || b.resolvedAt || b.createdAt);
+            return timeB - timeA;
+        });
 
         const lastCheckStr = localStorage.getItem('lastNotificationCheck');
         const lastCheckDate = lastCheckStr ? new Date(lastCheckStr) : new Date(0);
@@ -145,6 +150,14 @@ async function fetchAndDisplayNotifications(userId) {
                     iconHtml = '<i class="fas fa-times-circle" style="color: var(--danger-color);"></i>';
                     titleHtml = 'Issue Rejected';
                     descHtml = `Your report "${issue.title}" was rejected. ${issue.rejectionReason ? '<br>Reason: ' + issue.rejectionReason : ''}`;
+                } else if (issue.status === 'IN_PROGRESS') {
+                    iconHtml = '<i class="fas fa-spinner fa-spin" style="color: var(--warning-color);"></i>';
+                    titleHtml = 'Issue In Progress';
+                    descHtml = `Work has started on your report "${issue.title}".`;
+                } else if (issue.status === 'NEW') {
+                    iconHtml = '<i class="fas fa-file-alt" style="color: var(--primary-color);"></i>';
+                    titleHtml = 'Report Received';
+                    descHtml = `Your report "${issue.title}" has been successfully submitted and is under review.`;
                 }
 
                 const timeStr = updatedTime.toLocaleDateString() + ' ' + updatedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -196,9 +209,16 @@ function initializeUserLocationDisplay() {
 
                 let locationName = '';
                 if (data.address) {
-                    locationName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.address.county || '';
-                    if (locationName && data.address.state) {
-                        locationName += ', ' + data.address.state;
+                    const a = data.address;
+                    const parts = [
+                        a.neighbourhood || a.suburb || a.city_district || a.quarter,
+                        a.city || a.town || a.village || a.county
+                    ].filter(Boolean);
+                    
+                    locationName = parts.length > 0 ? parts.join(', ') : (data.display_name || '');
+                    
+                    if (locationName && a.state && !locationName.includes(a.state)) {
+                        locationName += ', ' + a.state;
                     }
                 }
 
@@ -327,6 +347,28 @@ function initializeForgotPassword() {
 }
 
 if (document.getElementById('registerFormElement')) {
+    const registerEmailInput = document.getElementById('registerEmail');
+    if (registerEmailInput) {
+        registerEmailInput.addEventListener('blur', async function() {
+            const email = this.value.trim();
+            if (!email || !email.includes('@')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/user?email=${encodeURIComponent(email)}`);
+                if (response.ok) {
+                    showMessage('This email is already registered. Please sign in instead.', 'error');
+                    this.classList.add('input-error');
+                    if (sendOtpBtn) sendOtpBtn.disabled = true;
+                } else {
+                    this.classList.remove('input-error');
+                    if (sendOtpBtn) sendOtpBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Email check failed:', error);
+            }
+        });
+    }
+
     const sendOtpBtn = document.getElementById('sendOtpBtn');
     const phoneInput = document.getElementById('mobileNumber');
     const otpGroup = document.getElementById('otpGroup');
@@ -362,7 +404,11 @@ if (document.getElementById('registerFormElement')) {
                     const otpInput = document.getElementById('otpInput');
                     if (otpInput) otpInput.focus();
                 } else {
-                    showMessage('Failed to send OTP: ' + resultText, 'error');
+                    if (resultText === 'Email already registered') {
+                        showMessage('This email is already registered. <a href="login.html" style="color:white; text-decoration:underline;">Click here to Login</a>', 'error');
+                    } else {
+                        showMessage('Failed to send OTP: ' + resultText, 'error');
+                    }
                     sendOtpBtn.disabled = false;
                     sendOtpBtn.textContent = 'Send OTP';
                 }
@@ -478,7 +524,11 @@ if (document.getElementById('registerFormElement')) {
                     }
                 }, 2000);
             } else {
-                showMessage(resultText, 'error');
+                if (resultText === 'Email already registered') {
+                    showMessage('This email is already registered. <a href="login.html" style="color:white; text-decoration:underline;">Click here to Login</a>', 'error');
+                } else {
+                    showMessage(resultText, 'error');
+                }
             }
         } catch (error) {
             console.error('Registration error:', error);
@@ -793,9 +843,10 @@ function initializeIssueDashboard() {
                 lngInput.value = '';
 
                 if (userEmail) {
-                    loadUserIssues(userEmail);
+                    loadUserIssues();
+                    const userId = localStorage.getItem('userId');
+                    if (userId) fetchAndDisplayNotifications(userId);
                 }
-                loadAnalyticsSummary();
             } catch (err) {
                 console.error('Issue submission error:', err);
                 showMessage(`Failed to submit issue: ${err.message}`, 'error');
@@ -1047,18 +1098,55 @@ function initReportPage() {
                 getLocationBtn.disabled = true;
 
                 navigator.geolocation.getCurrentPosition(
-                    (position) => {
+                    async (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
 
                         latInput.value = lat;
                         lngInput.value = lng;
 
-                        if (coordsSpan) coordsSpan.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                        if (locationInfo) locationInfo.style.display = 'flex';
-                        getLocationBtn.innerHTML = '✅ Location Secured';
-                        getLocationBtn.classList.remove('btn-secondary');
-                        getLocationBtn.classList.add('btn-primary');
+                        try {
+                            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                            const data = await response.json();
+                            
+                            let address = data.display_name;
+                            if (data.address) {
+                                const a = data.address;
+                                // Create a more meaningful location name with local area
+                                const addressParts = [
+                                    a.house_number,
+                                    a.road || a.pedestrian || a.path,
+                                    a.neighbourhood,
+                                    a.suburb,
+                                    a.city_district || a.quarter,
+                                    a.city || a.town || a.village,
+                                    a.state,
+                                    a.postcode
+                                ].filter(Boolean);
+                                
+                                // Deduplicate in case Nominatim returns same name for different levels
+                                const uniqueParts = addressParts.filter((part, index) => addressParts.indexOf(part) === index);
+                                
+                                if (uniqueParts.length > 0) {
+                                    address = uniqueParts.join(', ');
+                                }
+                            }
+
+                            if (document.getElementById('address')) {
+                                document.getElementById('address').value = address || data.display_name;
+                            }
+                            if (coordsSpan) coordsSpan.textContent = address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                            
+                            getLocationBtn.innerHTML = '✅ Location Secured';
+                            getLocationBtn.classList.remove('btn-secondary');
+                            getLocationBtn.classList.add('btn-primary');
+                        } catch (error) {
+                            console.error("Reverse geocoding failed:", error);
+                            if (coordsSpan) coordsSpan.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                            getLocationBtn.innerHTML = '✅ Coordinates Captured';
+                        } finally {
+                            if (locationInfo) locationInfo.style.display = 'flex';
+                        }
                     },
                     (error) => {
                         console.error("Error getting location:", error);
@@ -1113,7 +1201,31 @@ function initReportPage() {
         });
     }
 
+    // Track image verification status
+    window.isImageVerified = false;
+    window.isMorphed = false;
+    window.isCameraSource = true;
+    window.lastDetectedCategory = 'OTHER';
+
+    // Disable submit button by default until image verification passes
+    const submitBtn = document.getElementById('submitBtn');
+    function setSubmitEnabled(enabled) {
+        if (!submitBtn) return;
+        submitBtn.disabled = !enabled;
+        if (enabled) {
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.style.filter = 'none';
+        } else {
+            submitBtn.style.opacity = '0.45';
+            submitBtn.style.cursor = 'not-allowed';
+            submitBtn.style.filter = 'grayscale(40%)';
+        }
+    }
+    setSubmitEnabled(false);
+
     async function handleImageFile(file) {
+        setSubmitEnabled(false); 
         const p = dropZone.querySelector('p');
         if (p) p.innerHTML = `<span class="loading-spinner"></span> Analyzing image...`;
 
@@ -1141,24 +1253,57 @@ function initReportPage() {
                 const result = await response.json();
                 console.log('AI Analysis Result:', result);
 
-                if (result.identified_category && result.identified_category !== 'OTHER') {
-                    if (categorySelect) {
+                window.isMorphed = result.isMorphed || false;
+                window.lastDetectedCategory = result.identified_category || 'OTHER';
+
+                // ── Morphed / AI-generated → always block ───────────────────
+                if (window.isMorphed) {
+                    window.isImageVerified = false;
+                    setSubmitEnabled(false);
+                    const reason = result.rejectionReason || "Photo appears to be manipulated. Please upload an original photo.";
+                    if (p) p.innerHTML = `<span style="color:var(--danger-color);">❌ Rejected: ${reason}</span>`;
+                    showMessage(reason, "error");
+                    return;
+                }
+
+                // ── Civic issue detected → accept ────────────────────────────
+                if (result.isValid) {
+                    window.isImageVerified = true;
+                    setSubmitEnabled(true);
+                    if (result.identified_category && result.identified_category !== 'OTHER' && categorySelect) {
                         categorySelect.value = result.identified_category;
                         categorySelect.dispatchEvent(new Event('change'));
-                        if (p) p.innerHTML = `✅ ${file.name} (Detected: ${result.identified_category})`;
                     }
+                    if (p) p.innerHTML = `<span style="color:#10b981;">✅ Accepted</span> — ${file.name} (Detected: <strong>${result.identified_category || 'Civic Issue'}</strong>)`;
+
+                // ── No civic issue found → reject ────────────────────────────
                 } else {
-                    if (p) p.innerHTML = `✅ ${file.name} (Analysis complete)`;
+                    window.isImageVerified = false;
+                    setSubmitEnabled(false);
+                    const reason = result.rejectionReason || "Issue not identified in the photo.";
+                    if (p) p.innerHTML = `<span style="color:var(--danger-color);">❌ Rejected: ${reason}</span>`;
+                    showMessage(reason, "error");
                 }
+
             } else {
-                console.error('AI Analysis failed');
-                if (p) p.textContent = `✅ ${file.name} (Auto-detection failed)`;
+                // HTTP error from backend — STRICT: block user if verification fails
+                const errorText = await response.text();
+                console.error('AI Analysis failed:', errorText);
+                window.isImageVerified = false;
+                setSubmitEnabled(false);
+                if (p) p.innerHTML = `<span style="color:var(--danger-color);">⚠️ Verification failed. Please try a different photo.</span>`;
+                showMessage("Image verification failed. Please ensure you are uploading a clear photo of a civic issue.", "error");
             }
         } catch (error) {
-            console.error('Error during AI analysis:', error);
-            if (p) p.textContent = `✅ ${file.name}`;
+            // Unreachable — STRICT: block user
+            console.error('AI analysis unreachable:', error);
+            window.isImageVerified = false;
+            setSubmitEnabled(false);
+            if (p) p.innerHTML = `<span style="color:var(--danger-color);">⚠️ Verification service unavailable.</span>`;
+            showMessage("The image verification service is currently offline. Please try again later.", "error");
         }
     }
+
 
     const reportForm = document.getElementById('reportForm');
     if (reportForm && !reportForm.dataset.listenerAttached) {
@@ -1172,9 +1317,22 @@ function initReportPage() {
                 return;
             }
 
-            const submitBtn = document.getElementById('submitBtn');
+            // Enforce AI Image Verification & Security
+            if (document.getElementById('photoData').value) {
+                if (window.isMorphed) {
+                    showMessage("Submission blocked: Photo appears to be manipulated. Please upload an original photo.", "error");
+                    return;
+                }
+                if (!window.isImageVerified) {
+                    showMessage("Issue not identified in the photo. Please upload a clear photo of a civic issue (pothole, garbage, broken streetlight, water leak, etc.).", "error");
+                    return;
+                }
+            }
+
             submitBtn.disabled = true;
             submitBtn.textContent = 'Submitting...';
+            submitBtn.style.opacity = '0.7';
+            submitBtn.style.cursor = 'not-allowed';
 
             const userEmail = localStorage.getItem('userEmail');
             const userId = localStorage.getItem('userId');
@@ -1214,12 +1372,16 @@ function initReportPage() {
                     alert(`Failed to submit report: ${errorText}`);
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Submit Report';
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
                 }
             } catch (error) {
                 console.error('Error reporting issue:', error);
                 alert('An error occurred. Please try again.');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Submit Report';
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
             }
         });
     }
@@ -1239,6 +1401,8 @@ function initDashboardPage() {
     }
 
     loadUserIssues();
+    const userId = localStorage.getItem('userId');
+    if (userId) fetchAndDisplayNotifications(userId);
     window.nearYouIssues = [];
     loadNearYouIssues();
 
@@ -1267,12 +1431,60 @@ function initDashboardPage() {
 
     async function loadNearYouIssues() {
         if (!nearYouList) return;
+        
+        nearYouList.innerHTML = '<p class="message info">Detecting location to show issues near you...</p>';
+
+        if (!navigator.geolocation) {
+            nearYouList.innerHTML = '<p class="message error">Geolocation not supported. Showing all recent issues.</p>';
+            fetchAllIssues();
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+            await fetchAndFilterIssues(userLat, userLng);
+        }, (error) => {
+            console.error('Geolocation error:', error);
+            nearYouList.innerHTML = '<p class="message error">Unable to detect location. Showing all recent issues.</p>';
+            fetchAllIssues();
+        });
+    }
+
+    async function fetchAllIssues() {
         try {
             const response = await fetch(`${API_BASE}/issues`);
             if (response.ok) {
-                const issues = await response.json();
-                window.nearYouIssues = issues;
+                window.nearYouIssues = await response.json();
                 renderNearYouIssues(2);
+            }
+        } catch (error) {
+            console.error('Error loading fallback issues:', error);
+        }
+    }
+
+    async function fetchAndFilterIssues(userLat, userLng) {
+        try {
+            const response = await fetch(`${API_BASE}/issues`);
+            if (response.ok) {
+                const allIssues = await response.json();
+                
+                // Filter by 3km radius
+                const filteredIssues = allIssues.filter(issue => {
+                    if (issue.latitude && issue.longitude) {
+                        const dist = calculateDistance(userLat, userLng, issue.latitude, issue.longitude);
+                        return dist <= 3; // 3km radius
+                    }
+                    return false;
+                });
+
+                window.nearYouIssues = filteredIssues;
+                
+                if (filteredIssues.length === 0) {
+                    nearYouList.innerHTML = '<p class="message info">No recent issues reported within 3km of your location.</p>';
+                } else {
+                    renderNearYouIssues(2);
+                }
             } else {
                 nearYouList.innerHTML = '<p class="message error">Failed to load local feed.</p>';
             }
@@ -1421,6 +1633,19 @@ function initDashboardPage() {
         return 'Just now';
     }
 
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
+        const R = 6371; // Radius of the earth in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
     async function loadUserIssues() {
         const userId = localStorage.getItem('userId');
         if (!userId) {
@@ -1456,7 +1681,7 @@ function initDashboardPage() {
         issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         window.dashboardIssues = issues;
 
-        renderIssueList(3);
+        renderIssueList(4);
     }
 
     window.renderIssueList = function (limit) {
@@ -1534,9 +1759,11 @@ function initDashboardPage() {
         }).join('');
 
         if (hasMore) {
-            html += `<div style="text-align: center; margin-top: 20px;">
-                        <button type="button" onclick="renderIssueList(${limit + 3})" class="btn-secondary">View More</button>
-                     </div>`;
+            html += `<div style="text-align: center; margin-top: 30px; width: 100%;">
+                <button onclick="renderIssueList(${limit + 4})" class="btn-secondary" style="padding: 10px 40px; font-weight: 600;">
+                    View More Issues
+                </button>
+            </div>`;
         }
 
         issueList.innerHTML = html;
