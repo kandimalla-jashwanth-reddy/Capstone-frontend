@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Report Issue - CrowdCivics</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -68,13 +69,16 @@
             </div>
 
             <div class="form-group">
-                <label>Photo Evidence</label>
+                <label>Photo Evidence (Up to 5 photos)</label>
 
-                <div class="upload-area" id="dropZone">
-                    <p>📸 Click to take a photo or upload</p>
-                    <input type="file" id="fileInput" accept="image/*" capture="environment">
+                <div class="upload-area" id="dropZone" style="cursor: pointer; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 30px; text-align: center; transition: all 0.3s ease; background: #f8fafc;">
+                    <p style="margin: 0; color: #64748b; font-size: 1.1rem;">📸 Click to take photos or upload multiple</p>
+                    <input type="file" id="fileInput" accept="image/*" capture="environment" multiple style="display: none;">
                 </div>
-                <img id="imagePreview" alt="Preview">
+
+                <div id="photoPreviewContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-top: 20px;">
+                    <!-- Previews will be dynamically added here -->
+                </div>
 
                 <input type="hidden" id="photoData">
             </div>
@@ -88,6 +92,9 @@
 
             <button type="submit" class="btn-primary" id="submitBtn">Submit Report</button>
         </form>
+
+        <div id="message" class="message"></div>
+    </div>
 
         <div id="message" class="message"></div>
     </div>

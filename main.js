@@ -1097,64 +1097,70 @@ function initReportPage() {
                 getLocationBtn.textContent = 'Acquiring Location...';
                 getLocationBtn.disabled = true;
 
-                navigator.geolocation.getCurrentPosition(
-                    async (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
+                // Factor out success handler
+                const handleLocationSuccess = async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
 
-                        latInput.value = lat;
-                        lngInput.value = lng;
+                    latInput.value = lat;
+                    lngInput.value = lng;
 
-                        try {
-                            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-                            const data = await response.json();
-                            
-                            let address = data.display_name;
-                            if (data.address) {
-                                const a = data.address;
-                                // Create a more meaningful location name with local area
-                                const addressParts = [
-                                    a.house_number,
-                                    a.road || a.pedestrian || a.path,
-                                    a.neighbourhood,
-                                    a.suburb,
-                                    a.city_district || a.quarter,
-                                    a.city || a.town || a.village,
-                                    a.state,
-                                    a.postcode
-                                ].filter(Boolean);
-                                
-                                // Deduplicate in case Nominatim returns same name for different levels
-                                const uniqueParts = addressParts.filter((part, index) => addressParts.indexOf(part) === index);
-                                
-                                if (uniqueParts.length > 0) {
-                                    address = uniqueParts.join(', ');
-                                }
-                            }
-
-                            if (document.getElementById('address')) {
-                                document.getElementById('address').value = address || data.display_name;
-                            }
-                            if (coordsSpan) coordsSpan.textContent = address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                            
-                            getLocationBtn.innerHTML = '✅ Location Secured';
-                            getLocationBtn.classList.remove('btn-secondary');
-                            getLocationBtn.classList.add('btn-primary');
-                        } catch (error) {
-                            console.error("Reverse geocoding failed:", error);
-                            if (coordsSpan) coordsSpan.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                            getLocationBtn.innerHTML = '✅ Coordinates Captured';
-                        } finally {
-                            if (locationInfo) locationInfo.style.display = 'flex';
+                    try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                        const data = await response.json();
+                        
+                        let address = data.display_name;
+                        if (data.address) {
+                            const a = data.address;
+                            const addressParts = [
+                                a.house_number,
+                                a.road || a.pedestrian || a.path,
+                                a.neighbourhood,
+                                a.suburb,
+                                a.city_district || a.quarter,
+                                a.city || a.town || a.village,
+                                a.state,
+                                a.postcode
+                            ].filter(Boolean);
+                            const uniqueParts = addressParts.filter((part, index) => addressParts.indexOf(part) === index);
+                            if (uniqueParts.length > 0) address = uniqueParts.join(', ');
                         }
-                    },
-                    (error) => {
-                        console.error("Error getting location:", error);
-                        alert("Unable to retrieve your location. Please ensure location services are enabled.");
-                        getLocationBtn.textContent = '📍 Retry Location';
-                        getLocationBtn.disabled = false;
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+
+                        if (document.getElementById('address')) {
+                            document.getElementById('address').value = address || data.display_name;
+                        }
+                        if (coordsSpan) coordsSpan.textContent = address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        
+                        getLocationBtn.innerHTML = '✅ Location Secured';
+                        getLocationBtn.classList.remove('btn-secondary');
+                        getLocationBtn.classList.add('btn-primary');
+                    } catch (error) {
+                        console.error("Reverse geocoding failed:", error);
+                        if (coordsSpan) coordsSpan.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        getLocationBtn.innerHTML = '✅ Coordinates Captured';
+                    } finally {
+                        if (locationInfo) locationInfo.style.display = 'flex';
+                    }
+                };
+
+                const handleLocationError = (error) => {
+                    console.warn("High accuracy location failed, trying fallback...", error);
+                    navigator.geolocation.getCurrentPosition(
+                        handleLocationSuccess,
+                        (fallbackError) => {
+                            console.error("Geolocation failed:", fallbackError);
+                            alert("Unable to retrieve your location. Please ensure location services are enabled or enter coordinates manually.");
+                            getLocationBtn.textContent = '📍 Retry Location';
+                            getLocationBtn.disabled = false;
+                        },
+                        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+                    );
+                };
+
+                navigator.geolocation.getCurrentPosition(
+                    handleLocationSuccess,
+                    handleLocationError,
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
                 );
             } else {
                 alert("Geolocation is not supported by this browser.");
@@ -1164,8 +1170,10 @@ function initReportPage() {
 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
-    const imagePreview = document.getElementById('imagePreview');
-    const photoDataInput = document.getElementById('photoData');
+    const previewContainer = document.getElementById('photoPreviewContainer');
+
+    // New state management for multiple photos
+    let uploadedPhotos = []; // Array of { id, file, dataUrl, isValid, status }
 
     if (dropZone && fileInput) {
         dropZone.addEventListener('click', (e) => {
@@ -1175,40 +1183,219 @@ function initReportPage() {
         });
 
         fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                handleImageFile(file);
+            if (e.target.files.length > 0) {
+                handleImageFiles(e.target.files);
+                e.target.value = ''; // Reset for next selection
             }
         });
 
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.style.borderColor = 'var(--primary-color)';
+            dropZone.style.backgroundColor = '#f0f9ff';
         });
 
         dropZone.addEventListener('dragleave', (e) => {
             e.preventDefault();
             dropZone.style.borderColor = '#cbd5e1';
+            dropZone.style.backgroundColor = '#f8fafc';
         });
 
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.style.borderColor = '#cbd5e1';
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                handleImageFile(file);
+            dropZone.style.backgroundColor = '#f8fafc';
+            if (e.dataTransfer.files.length > 0) {
+                handleImageFiles(e.dataTransfer.files);
             }
         });
     }
 
-    // Track image verification status
-    window.isImageVerified = false;
-    window.isMorphed = false;
-    window.isCameraSource = true;
-    window.lastDetectedCategory = 'OTHER';
+    function handleImageFiles(files) {
+        const fileList = Array.from(files).filter(f => f.type.startsWith('image/'));
+        
+        if (uploadedPhotos.length + fileList.length > 5) {
+            alert("Maximum 5 photos allowed. Please remove existing ones first.");
+            return;
+        }
 
-    // Disable submit button by default until image verification passes
+        fileList.forEach(file => {
+            const photoId = Math.random().toString(36).substr(2, 9);
+            const photoObj = {
+                id: photoId,
+                file: file,
+                dataUrl: null,
+                isValid: false,
+                status: 'analyzing'
+            };
+            uploadedPhotos.push(photoObj);
+            renderPhotoPreview(photoObj);
+            analyzePhoto(photoObj);
+        });
+        updateAddCardVisibility();
+        updateSubmitButtonState();
+    }
+
+    function updateAddCardVisibility() {
+        // Remove existing add card
+        const existingCard = document.getElementById('add-photo-card');
+        if (existingCard) existingCard.remove();
+
+        // Hide primary dropZone if we have photos (user request: show "add photo" option instead)
+        if (uploadedPhotos.length > 0) {
+            dropZone.style.display = 'none';
+        } else {
+            dropZone.style.display = 'block';
+        }
+
+        // Add small card to grid if < 5
+        if (uploadedPhotos.length > 0 && uploadedPhotos.length < 5) {
+            const addCard = document.createElement('div');
+            addCard.id = 'add-photo-card';
+            addCard.className = 'photo-preview-item add-card';
+            addCard.style = 'cursor: pointer; border: 2px dashed #cbd5e1; border-radius: 12px; height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; transition: all 0.2s;';
+            addCard.innerHTML = `
+                <div style="font-size: 1.5rem; color: #64748b;">+</div>
+                <div style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Add Photo</div>
+            `;
+            addCard.onclick = () => fileInput.click();
+            addCard.onmouseover = () => { addCard.style.borderColor = 'var(--primary-color)'; addCard.style.backgroundColor = '#f1f5f9'; };
+            addCard.onmouseout = () => { addCard.style.borderColor = '#cbd5e1'; addCard.style.backgroundColor = '#f8fafc'; };
+            previewContainer.appendChild(addCard);
+        }
+    }
+
+    async function analyzePhoto(photoObj) {
+        // Read file for preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            photoObj.dataUrl = e.target.result;
+            const previewImg = document.getElementById(`img-${photoObj.id}`);
+            if (previewImg) {
+                previewImg.src = e.target.result;
+                previewImg.style.opacity = '0.5'; // Keeping it dim while analyzing
+            }
+        };
+        reader.readAsDataURL(photoObj.file);
+
+        // Call AI API to analyze image
+        try {
+            const formData = new FormData();
+            formData.append('image', photoObj.file);
+
+            const response = await fetch(`${API_BASE}/image/analyze`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                photoObj.isValid = result.isValid && !result.isMorphed;
+                photoObj.status = photoObj.isValid ? 'verified' : 'rejected';
+                photoObj.rejectionReason = result.rejectionReason;
+
+                if (photoObj.isValid && result.identified_category && result.identified_category !== 'OTHER' && categorySelect) {
+                    // Auto-suggest category if current one is default
+                    if (!categorySelect.value || categorySelect.value === '') {
+                        categorySelect.value = result.identified_category;
+                        categorySelect.dispatchEvent(new Event('change'));
+                    }
+                }
+                
+                updatePreviewUI(photoObj);
+            } else {
+                photoObj.isValid = false;
+                photoObj.status = 'failed';
+                updatePreviewUI(photoObj, "Verification failed");
+            }
+        } catch (error) {
+            console.error('Photo analysis error:', error);
+            photoObj.isValid = false;
+            photoObj.status = 'failed';
+            updatePreviewUI(photoObj, "Service offline");
+        } finally {
+            updateSubmitButtonState();
+        }
+    }
+
+    function renderPhotoPreview(photoObj) {
+        if (!previewContainer) return;
+        
+        const div = document.createElement('div');
+        div.id = `preview-${photoObj.id}`;
+        div.style = 'position: relative; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; height: 110px; background: #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);';
+        
+        div.innerHTML = `
+            <img id="img-${photoObj.id}" style="width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s;">
+            <div id="status-${photoObj.id}" style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(30, 41, 59, 0.8); color: white; font-size: 0.65rem; padding: 4px; text-align: center; backdrop-filter: blur(2px);">
+                ⌛ Analyzing...
+            </div>
+            <button type="button" class="img-remove-btn" onclick="removePhoto('${photoObj.id}')" style="position: absolute; top: 4px; right: 4px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #ef4444; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #fee2e2;">✕</button>
+        `;
+        
+        previewContainer.appendChild(div);
+    }
+
+    window.removePhoto = function(photoId) {
+        uploadedPhotos = uploadedPhotos.filter(p => p.id !== photoId);
+        const el = document.getElementById(`preview-${photoId}`);
+        if (el) el.remove();
+        updateAddCardVisibility();
+        updateSubmitButtonState();
+    };
+
+    function updatePreviewUI(photoObj, errorMsg) {
+        const statusEl = document.getElementById(`status-${photoObj.id}`);
+        const previewImg = document.getElementById(`img-${photoObj.id}`);
+        if (!statusEl) return;
+
+        if (photoObj.status === 'verified') {
+            statusEl.innerHTML = '✅ Verified';
+            statusEl.style.backgroundColor = 'rgba(16, 185, 129, 0.85)';
+            if (previewImg) previewImg.style.opacity = '1';
+        } else if (photoObj.status === 'rejected') {
+            statusEl.innerHTML = '❌ Rejected';
+            statusEl.style.backgroundColor = 'rgba(239, 68, 68, 0.85)';
+            statusEl.title = photoObj.rejectionReason || "Issue not identified";
+            if (previewImg) previewImg.style.opacity = '0.3';
+        } else {
+            statusEl.innerHTML = `⚠️ ${errorMsg || 'Failed'}`;
+            statusEl.style.backgroundColor = 'rgba(100, 116, 139, 0.85)';
+        }
+    }
+
     const submitBtn = document.getElementById('submitBtn');
+    
+    function updateSubmitButtonState() {
+        if (!submitBtn) return;
+        
+        if (uploadedPhotos.length === 0) {
+            setSubmitEnabled(false);
+            submitBtn.textContent = 'Submit Report';
+            return;
+        }
+
+        const allAnalyzed = uploadedPhotos.every(p => p.status !== 'analyzing');
+        const anyVerified = uploadedPhotos.some(p => p.status === 'verified');
+        const anyIssue = uploadedPhotos.some(p => p.status === 'rejected' || p.status === 'failed');
+
+        if (!allAnalyzed) {
+            setSubmitEnabled(false);
+            submitBtn.textContent = 'Verifying Photos...';
+        } else if (anyIssue) {
+            setSubmitEnabled(false);
+            submitBtn.textContent = 'Remove Rejected Photos';
+            const rejected = uploadedPhotos.find(p => p.status === 'rejected');
+            if (rejected) showMessage(rejected.rejectionReason || "One or more photos were rejected. Please remove them.", "error");
+        } else if (anyVerified) {
+            setSubmitEnabled(true);
+            submitBtn.textContent = 'Submit Report';
+        } else {
+            setSubmitEnabled(false);
+            submitBtn.textContent = 'Check Photos';
+        }
+    }
+
     function setSubmitEnabled(enabled) {
         if (!submitBtn) return;
         submitBtn.disabled = !enabled;
@@ -1222,88 +1409,9 @@ function initReportPage() {
             submitBtn.style.filter = 'grayscale(40%)';
         }
     }
-    setSubmitEnabled(false);
 
-    async function handleImageFile(file) {
-        setSubmitEnabled(false); 
-        const p = dropZone.querySelector('p');
-        if (p) p.innerHTML = `<span class="loading-spinner"></span> Analyzing image...`;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            if (imagePreview) {
-                imagePreview.src = e.target.result;
-                imagePreview.style.display = 'block';
-            }
-            if (photoDataInput) photoDataInput.value = e.target.result;
-        };
-        reader.readAsDataURL(file);
-
-        // Call AI API to analyze image
-        try {
-            const formData = new FormData();
-            formData.append('image', file);
-
-            const response = await fetch(`${API_BASE}/image/analyze`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                console.log('AI Analysis Result:', result);
-
-                window.isMorphed = result.isMorphed || false;
-                window.lastDetectedCategory = result.identified_category || 'OTHER';
-
-                // ── Morphed / AI-generated → always block ───────────────────
-                if (window.isMorphed) {
-                    window.isImageVerified = false;
-                    setSubmitEnabled(false);
-                    const reason = result.rejectionReason || "Photo appears to be manipulated. Please upload an original photo.";
-                    if (p) p.innerHTML = `<span style="color:var(--danger-color);">❌ Rejected: ${reason}</span>`;
-                    showMessage(reason, "error");
-                    return;
-                }
-
-                // ── Civic issue detected → accept ────────────────────────────
-                if (result.isValid) {
-                    window.isImageVerified = true;
-                    setSubmitEnabled(true);
-                    if (result.identified_category && result.identified_category !== 'OTHER' && categorySelect) {
-                        categorySelect.value = result.identified_category;
-                        categorySelect.dispatchEvent(new Event('change'));
-                    }
-                    if (p) p.innerHTML = `<span style="color:#10b981;">✅ Accepted</span> — ${file.name} (Detected: <strong>${result.identified_category || 'Civic Issue'}</strong>)`;
-
-                // ── No civic issue found → reject ────────────────────────────
-                } else {
-                    window.isImageVerified = false;
-                    setSubmitEnabled(false);
-                    const reason = result.rejectionReason || "Issue not identified in the photo.";
-                    if (p) p.innerHTML = `<span style="color:var(--danger-color);">❌ Rejected: ${reason}</span>`;
-                    showMessage(reason, "error");
-                }
-
-            } else {
-                // HTTP error from backend — STRICT: block user if verification fails
-                const errorText = await response.text();
-                console.error('AI Analysis failed:', errorText);
-                window.isImageVerified = false;
-                setSubmitEnabled(false);
-                if (p) p.innerHTML = `<span style="color:var(--danger-color);">⚠️ Verification failed. Please try a different photo.</span>`;
-                showMessage("Image verification failed. Please ensure you are uploading a clear photo of a civic issue.", "error");
-            }
-        } catch (error) {
-            // Unreachable — STRICT: block user
-            console.error('AI analysis unreachable:', error);
-            window.isImageVerified = false;
-            setSubmitEnabled(false);
-            if (p) p.innerHTML = `<span style="color:var(--danger-color);">⚠️ Verification service unavailable.</span>`;
-            showMessage("The image verification service is currently offline. Please try again later.", "error");
-        }
-    }
-
+    // Initialize state
+    updateSubmitButtonState();
 
     const reportForm = document.getElementById('reportForm');
     if (reportForm && !reportForm.dataset.listenerAttached) {
@@ -1317,22 +1425,27 @@ function initReportPage() {
                 return;
             }
 
-            // Enforce AI Image Verification & Security
-            if (document.getElementById('photoData').value) {
-                if (window.isMorphed) {
-                    showMessage("Submission blocked: Photo appears to be manipulated. Please upload an original photo.", "error");
-                    return;
-                }
-                if (!window.isImageVerified) {
-                    showMessage("Issue not identified in the photo. Please upload a clear photo of a civic issue (pothole, garbage, broken streetlight, water leak, etc.).", "error");
-                    return;
-                }
+            // Final check on verified photos
+            if (uploadedPhotos.length === 0) {
+                showMessage("Please upload at least one valid photo of the issue.", "error");
+                return;
+            }
+
+            const pending = uploadedPhotos.some(p => p.status === 'analyzing');
+            if (pending) {
+                showMessage("Please wait for photo verification to complete.", "info");
+                return;
+            }
+
+            const invalid = uploadedPhotos.filter(p => !p.isValid);
+            if (invalid.length > 0) {
+                showMessage("One or more photos are invalid. Please remove them before submitting.", "error");
+                return;
             }
 
             submitBtn.disabled = true;
             submitBtn.textContent = 'Submitting...';
             submitBtn.style.opacity = '0.7';
-            submitBtn.style.cursor = 'not-allowed';
 
             const userEmail = localStorage.getItem('userEmail');
             const userId = localStorage.getItem('userId');
@@ -1342,6 +1455,9 @@ function initReportPage() {
                 finalCategory = document.getElementById('otherCategory').value || 'OTHER';
             }
 
+            // Collect all verified photo data URLs
+            const photoUrls = uploadedPhotos.map(p => p.dataUrl);
+
             const issueData = {
                 title: document.getElementById('title').value,
                 description: document.getElementById('description').value,
@@ -1349,7 +1465,7 @@ function initReportPage() {
                 latitude: document.getElementById('latitude').value,
                 longitude: document.getElementById('longitude').value,
                 address: document.getElementById('address') ? document.getElementById('address').value : null,
-                photoUrl: document.getElementById('photoData') ? document.getElementById('photoData').value : null,
+                photoUrls: photoUrls, // Send as array
                 reporterEmail: userEmail,
                 reporterId: userId ? parseInt(userId) : null
             };
@@ -1364,8 +1480,7 @@ function initReportPage() {
                 });
 
                 if (response.ok) {
-                    const result = await response.json();
-                    alert(`Issue Reported Successfully!`);
+                    alert(`Issue Reported Successfully with ${photoUrls.length} photos!`);
                     window.location.href = 'dashboard.html';
                 } else {
                     const errorText = await response.text();
@@ -1373,15 +1488,13 @@ function initReportPage() {
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Submit Report';
                     submitBtn.style.opacity = '1';
-                    submitBtn.style.cursor = 'pointer';
                 }
             } catch (error) {
                 console.error('Error reporting issue:', error);
-                alert('An error occurred. Please try again.');
+                alert('An error occurred during submission. Please check your connection.');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Submit Report';
                 submitBtn.style.opacity = '1';
-                submitBtn.style.cursor = 'pointer';
             }
         });
     }
@@ -1509,6 +1622,7 @@ function initDashboardPage() {
         const issuesToRender = limit ? issues.slice(0, limit) : issues;
 
         const html = issuesToRender.map(issue => {
+            console.log("Rendering Near You Issue:", issue);
             const timeAgo = getTimeAgo(issue.createdAt);
             const categoryClass = `category-${issue.category.toLowerCase().replace(/\s+/g, '-')}`;
 
@@ -1533,7 +1647,9 @@ function initDashboardPage() {
                 <div class="near-you-description">
                     ${escapeHtml(issue.description)}
                 </div>
-                ${issue.photoUrl ? `<img src="${issue.photoUrl}" class="near-you-image" alt="Issue Image">` : ''}
+                ${(issue.photoUrls && issue.photoUrls.length > 0) ? 
+                    `<img src="${issue.photoUrls[0]}" class="near-you-image" alt="Issue Image" style="object-fit: cover; width: 100%; height: 280px; border-radius: 12px; margin-bottom: 15px;">` : 
+                    (issue.photoUrl ? `<img src="${issue.photoUrl}" class="near-you-image" alt="Issue Image" style="object-fit: cover; width: 100%; height: 280px; border-radius: 12px; margin-bottom: 15px;">` : '')}
                 <div class="near-you-footer">
                     <div class="near-you-interactions">
                         <div class="interaction-item">
@@ -1599,11 +1715,21 @@ function initDashboardPage() {
                 <p style="color: var(--text-main); line-height: 1.6; font-size: 0.95rem;">${escapeHtml(issue.description)}</p>
             </div>
 
-            ${issue.photoUrl ? `
+            ${(issue.photoUrls && issue.photoUrls.length > 0) ? `
+            <div style="margin-bottom: 25px;">
+                <h4 style="margin-bottom: 12px; font-size: 1rem;">Evidence Photos (${issue.photoUrls.length})</h4>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                    ${issue.photoUrls.map((url, idx) => `
+                        <div style="border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; cursor: zoom-in; height: 160px;" onclick="viewPhoto('${url}')">
+                            <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;" alt="Evidence ${idx+1}">
+                        </div>
+                    `).join('')}
+                </div>
+            </div>` : (issue.photoUrl ? `
             <div style="margin-bottom: 25px;">
                 <h4 style="margin-bottom: 10px; font-size: 1rem;">Report Photo</h4>
-                <img src="${issue.photoUrl}" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-md);" alt="Issue Photo">
-            </div>` : ''}
+                <img src="${issue.photoUrl}" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-md); cursor: zoom-in;" alt="Issue Photo" onclick="viewPhoto('${issue.photoUrl}')">
+            </div>` : '')}
 
             ${issue.status === 'RESOLVED' && issue.resolutionPhotoUrl ? `
             <div style="margin-top: 25px; padding-top: 25px; border-top: 2px dashed #e2e8f0;">
@@ -1679,6 +1805,7 @@ function initDashboardPage() {
         }
 
         issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        console.log("Rendering My Reports:", issues);
         window.dashboardIssues = issues;
 
         renderIssueList(4);
@@ -1734,7 +1861,11 @@ function initDashboardPage() {
                     Reported on ${new Date(issue.createdAt).toLocaleDateString()} • ${issue.category}
                 </div>
                 <div class="issue-description">${escapeHtml(issue.description)}</div>
-                ${issue.photoUrl ? `<div style="margin-top: 10px;"><img src="${issue.photoUrl}" class="issue-photo-thumb" alt="Issue Photo"></div>` : ''}
+                ${(issue.photoUrls && issue.photoUrls.length > 0) ? 
+                    `<div style="margin-top: 15px; display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
+                        ${issue.photoUrls.map(url => `<img src="${url}" class="issue-photo-thumb" style="width: 140px; height: 100px; object-fit: cover; border-radius: 10px; flex-shrink: 0; cursor: pointer; border: 1px solid #e2e8f0;" onclick="viewPhoto('${url}')">`).join('')}
+                    </div>` : 
+                    (issue.photoUrl ? `<div style="margin-top: 12px;"><img src="${issue.photoUrl}" class="issue-photo-thumb" alt="Issue Photo" style="width: 160px; height: 120px; object-fit: cover; border-radius: 10px; cursor: pointer; border: 1px solid #e2e8f0;" onclick="viewPhoto('${issue.photoUrl}')"></div>` : '')}
                 ${issue.status === 'REJECTED' && issue.rejectionReason ? `
                     <div style="margin-top: 15px; padding: 10px; border-left: 4px solid #ef4444; background: #fef2f2; border-radius: 4px;">
                         <h4 style="margin: 0 0 5px 0; font-size: 0.95rem; color: #b91c1c;">Rejection Reason</h4>

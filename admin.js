@@ -224,8 +224,9 @@ function renderIssuesTable(issues) {
 
         const dateReported = issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'Unknown';
 
-        const photoHtml = issue.photoUrl
-            ? `<button class="btn-secondary" onclick="viewPhoto('${issue.photoUrl}')" style="padding: 4px 8px; font-size: 0.8rem;">View Photo</button>`
+        const photoUrlsArr = issue.photoUrls || (issue.photoUrl ? [issue.photoUrl] : []);
+        const photoHtml = photoUrlsArr.length > 0
+            ? `<button class="btn-secondary" onclick="viewIssuePhotos(${issue.id})" style="padding: 4px 8px; font-size: 0.8rem;">View Photos (${photoUrlsArr.length})</button>`
             : '<span style="color: #64748b; font-size: 0.85em;">No Photo</span>';
 
         tr.innerHTML = `
@@ -356,6 +357,47 @@ function togglePhotoUpload(id) {
         if (fileInput) fileInput.value = '';
     }
 }
+
+window.viewIssuePhotos = function (id) {
+    const issue = allIssues.find(i => i.id === id);
+    if (!issue) return;
+    
+    const photos = issue.photoUrls || (issue.photoUrl ? [issue.photoUrl] : []);
+    if (photos.length === 0) {
+        alert("No photos available for this issue.");
+        return;
+    }
+    
+    const w = window.open("");
+    let html = `
+        <head><title>Issue #${id} Photos</title></head>
+        <body style="margin:0; background:#f1f5f9; font-family: system-ui, -apple-system, sans-serif; padding: 30px;">
+            <div style="max-width: 1000px; margin: 0 auto;">
+                <h2 style="text-align:center; color: #1e293b; margin-bottom: 30px;">Issue #${id}: Evidence Photos (${photos.length})</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+    `;
+    
+    photos.forEach((url, index) => {
+        html += `
+            <div style="background:white; padding:15px; border-radius:12px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">
+                <a href="${url}" target="_blank">
+                    <img src="${url}" style="width: 100%; height: 250px; display: block; border-radius:8px; object-fit: cover; cursor: zoom-in;">
+                </a>
+                <p style="text-align:center; margin-top:12px; color:#475569; font-weight: 500;">Photo ${index + 1}</p>
+            </div>
+        `;
+    });
+    
+    html += `
+                </div>
+                <div style="text-align:center; margin-top:40px;">
+                    <button onclick="window.close()" style="background:#1e293b; color:white; border:none; padding:10px 25px; border-radius:8px; cursor:pointer; font-weight:600;">Close Gallery</button>
+                </div>
+            </div>
+        </body>
+    `;
+    w.document.write(html);
+};
 
 window.viewPhoto = function (url) {
     const w = window.open("");

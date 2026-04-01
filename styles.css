@@ -123,12 +123,12 @@ h6 {
 }
 
 h1 {
-    font-size: 2.5rem;
+    font-size: 2.8rem;
     letter-spacing: -0.025em;
 }
 
 h2 {
-    font-size: 2rem;
+    font-size: 2.4rem;
     letter-spacing: -0.025em;
 }
 
@@ -181,7 +181,7 @@ p {
 }
 
 .subtitle {
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     color: var(--text-muted);
     text-align: center;
     margin-bottom: 2rem;
@@ -195,7 +195,7 @@ p {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    font-size: 0.9rem;
+    font-size: 1.1rem;
     color: var(--text-main);
 }
 
@@ -205,7 +205,7 @@ p {
     padding: 0.75rem 1rem;
     border: 1px solid #e2e8f0;
     border-radius: var(--radius-sm);
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     transition: var(--transition-base);
     background-color: #f8fafc;
 }
@@ -228,7 +228,7 @@ p {
     padding: 1rem;
     margin-bottom: 1.5rem;
     border-radius: var(--radius-md);
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     font-weight: 500;
     text-align: center;
 }
@@ -260,6 +260,7 @@ p {
     background: var(--primary-color);
     color: var(--primary-navy);
     font-weight: 700;
+    font-size: 1.1rem;
     border: none;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -1971,4 +1972,5 @@ body.auth-page {
     border-radius: 4px;
     font-size: 0.8rem;
     margin-right: 8px;
-}
+}
+
