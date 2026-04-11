@@ -1,150 +1,261 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - CrowdCivics</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile – CrowdCivics</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="profile.css">
 </head>
-
 <body>
-    <nav class="dashboard-header">
-        <div>
-            <h1 style="font-size: 1.8rem; margin-bottom: 0.2rem; color: white;" id="profileHeaderName">Your Profile
-            </h1>
-            <p class="subtitle" style="margin-bottom: 0; text-align: left; font-size: 0.85rem; color: #cbd5e1;">
-                Manage your CrowdCivics account details.</p>
+
+  <!-- ── NAVBAR ── -->
+  <nav class="dash-nav">
+    <div class="dash-nav-left">
+      <a href="index.html" class="dash-brand">
+        <span class="dash-brand-dot"></span>CrowdCivics
+      </a>
+      <div class="dash-greeting">Hi, <strong id="userNameHeader">Citizen</strong> 👋</div>
+    </div>
+    <div class="dash-nav-right">
+      <div class="notif-wrap">
+        <button class="notif-btn" id="notifBell">
+          <i class="far fa-bell"></i>
+          <div class="notif-badge" id="notifBadge" style="display:none;">0</div>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-head">
+            <span>Notifications</span>
+            <button class="notif-clear" id="notifClear">Clear All</button>
+          </div>
+          <div class="notif-list" id="notificationList">
+            <div class="notif-empty">No new notifications</div>
+          </div>
         </div>
-        <nav class="header-nav" style="display: flex; gap: 1rem; align-items: center;">
-            <a href="dashboard.html" class="nav-link">Dashboard</a>
-            <a href="report.html" class="nav-link">Report Issue</a>
-            <button id="logoutBtn" class="btn-secondary" style="padding: 0.5rem 1rem;">Logout</button>
-        </nav>
-    </nav>
+      </div>
+      <a href="dashboard.html" class="dash-nav-link"><i class="fas fa-home"></i> Dashboard</a>
+      <a href="report.html" class="dash-nav-link"><i class="fas fa-plus"></i> Report</a>
+      <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </nav>
 
-    <div class="dashboard full-width">
+  <!-- ── LAYOUT ── -->
+  <div class="profile-layout">
 
-        <div class="dashboard-grid">
+    <!-- Left: avatar card -->
+    <aside class="profile-sidebar">
 
-            <div class="user-info">
-                <h2>Account Information</h2>
-                <div class="info-card">
-                    <p><strong>Name:</strong> <span id="userName">Loading...</span></p>
-                    <p><strong>Email:</strong> <span id="userEmail">Loading...</span></p>
-                    <p><strong>Phone:</strong> <span id="userPhone">Loading...</span></p>
-                    <p><strong>User ID:</strong> <span id="userId">Loading...</span></p>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2>About Your Profile</h2>
-                <p style="margin-bottom:8px;color:#555;">
-                    Your profile is used to attach your name and contact information to the civic
-                    issues you report. This helps municipal staff follow up if they need more details
-                    and keeps a history of the issues you have submitted.
-                </p>
-                <p style="margin-bottom:8px;color:#555;">
-                    Any issues you create from the dashboard will automatically use the name, email,
-                    and phone number shown on this page.
-                </p>
-            </div>
-
-            <div class="card" style="margin-top: 2rem;">
-                <h2>Notification Preferences</h2>
-                <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                        <input type="checkbox" id="prefEmailUpdates" checked> Receive email updates when issue status
-                        changes
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                        <input type="checkbox" id="prefSmsAlerts" checked> Receive SMS alerts for urgent civic alerts in
-                        my area
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                        <input type="checkbox" id="prefNewsletter"> Subscribe to monthly CrowdCivics newsletter
-                    </label>
-                    <button id="savePreferencesBtn" class="btn-primary"
-                        style="margin-top: 10px; width: auto; align-self: flex-start;">Save
-                        Preferences</button>
-                </div>
-            </div>
-
-            <div class="card" style="margin-top: 2rem;">
-                <h2>Security</h2>
-                <p style="margin-bottom:8px;color:#555;">Update your account password here.</p>
-
-                <form id="updatePasswordForm"
-                    style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px; max-width: 400px;"
-                    onsubmit="event.preventDefault();">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label for="currentPassword">Current Password</label>
-                        <input type="password" id="currentPassword" required placeholder="Enter current password"
-                            style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label for="newUpdatePassword">New Password</label>
-                        <input type="password" id="newUpdatePassword" required placeholder="Enter new password"
-                            style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label for="confirmUpdatePassword">Confirm New Password</label>
-                        <input type="password" id="confirmUpdatePassword" required placeholder="Confirm new password"
-                            style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    </div>
-                    <button type="submit" id="updatePasswordBtn" class="btn-primary"
-                        style="margin-top: 5px; width: auto; align-self: flex-start;">Update Password</button>
-                    <div id="passwordUpdateMessage" style="font-size: 0.9rem; margin-top: 5px;"></div>
-                </form>
-            </div>
-
-
-            <div id="message" class="message"></div>
+      <div class="profile-avatar-card">
+        <div class="profile-avatar" id="profileAvatar">?</div>
+        <div class="profile-name" id="profileHeaderName">Loading...</div>
+        <div class="profile-email-text" id="profileEmailDisplay">—</div>
+        <span class="status-pill resolved" style="margin:4px 0 20px;"><i class="fas fa-check"></i> Verified Citizen</span>
+        <div class="profile-mini-stats">
+          <div class="mini-stat"><div class="mini-stat-num" id="stat-total">—</div><div class="mini-stat-label">Reports</div></div>
+          <div class="mini-stat"><div class="mini-stat-num" id="stat-resolved">—</div><div class="mini-stat-label">Resolved</div></div>
+          <div class="mini-stat"><div class="mini-stat-num" id="stat-rate">—</div><div class="mini-stat-label">Rate</div></div>
         </div>
+      </div>
 
-        <div class="chat-widget">
-            <button id="chatToggle" class="chat-toggle">Chat</button>
-            <div id="chatWindow" class="chat-window" aria-hidden="true">
-                <div class="chat-header">
-                    <span>CrowdCivics Assistant</span>
-                    <button id="chatClose" class="chat-close">&times;</button>
-                </div>
-                <div id="chatMessages" class="chat-messages"></div>
-                <form id="chatForm" class="chat-form">
-                    <input id="chatInput" type="text" class="chat-input"
-                        placeholder="Ask about your account or reports..." autocomplete="off" />
-                    <button type="submit" class="chat-send">Send</button>
-                </form>
-            </div>
+      <div class="profile-nav-card">
+        <a href="#accountSection" class="profile-nav-link active"><i class="fas fa-user"></i> Account Info</a>
+        <a href="#notifSection"   class="profile-nav-link"><i class="fas fa-bell"></i> Notifications</a>
+        <a href="#securitySection" class="profile-nav-link"><i class="fas fa-lock"></i> Security</a>
+      </div>
+    </aside>
+
+    <!-- Right: cards -->
+    <main class="profile-main">
+
+      <!-- Account Info -->
+      <div class="profile-card" id="accountSection">
+        <div class="profile-card-head">
+          <h3><i class="fas fa-user"></i> Account Information</h3>
         </div>
-
-        <footer class="dashboard-footer">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>CrowdCivics</h4>
-                    <p>Empowering citizens to effectively report, track, and resolve civic issues in your neighborhood.
-                    </p>
-                </div>
-                <div class="footer-section">
-                    <h4>Quick Links</h4>
-                    <a href="dashboard.html#myReportsSection">My Reports</a>
-                    <a href="dashboard.html#analyticsSection">City Overview</a>
-                    <a href="profile.html">Profile Settings</a>
-                </div>
-                <div class="footer-section">
-                    <h4>Contact Support</h4>
-                    <p>Email: support@crowdcivics.com</p>
-                    <p>Phone: 1-800-CIVICS</p>
-                    <p>Hours: Mon-Fri, 9am - 5pm</p>
-                </div>
+        <div class="info-row" id="row-name">
+          <div class="info-icon"><i class="fas fa-user"></i></div>
+          <div>
+            <div class="info-label">Full Name</div>
+            <div class="info-value" id="userName">Loading...</div>
+            <div class="inline-input-container">
+              <input type="text" class="inline-input" id="edit-name">
+              <button class="btn-save-inline" onclick="saveProfileField('name')"><i class="fas fa-check"></i></button>
+              <button class="btn-cancel-inline" onclick="toggleEditMode('name')"><i class="fas fa-times"></i></button>
             </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 CrowdCivics. All rights reserved. | <a href="#">Terms & Privacy</a></p>
+          </div>
+          <i class="fas fa-pencil-alt edit-icon" onclick="toggleEditMode('name')"></i>
+        </div>
+        <div class="info-row" id="row-email">
+          <div class="info-icon"><i class="fas fa-envelope"></i></div>
+          <div>
+            <div class="info-label">Email Address</div>
+            <div class="info-value" id="userEmail">—</div>
+          </div>
+        </div>
+        <div class="info-row" id="row-phone">
+          <div class="info-icon"><i class="fas fa-phone"></i></div>
+          <div>
+            <div class="info-label">Mobile Number</div>
+            <div class="info-value" id="userPhone">—</div>
+            <div class="inline-input-container">
+              <input type="tel" class="inline-input" id="edit-phone">
+              <button class="btn-save-inline" onclick="saveProfileField('phone')"><i class="fas fa-check"></i></button>
+              <button class="btn-cancel-inline" onclick="toggleEditMode('phone')"><i class="fas fa-times"></i></button>
             </div>
-        </footer>
+          </div>
+          <i class="fas fa-pencil-alt edit-icon" onclick="toggleEditMode('phone')"></i>
+        </div>
+        <div class="info-row"><div class="info-icon"><i class="fas fa-id-card"></i></div><div><div class="info-label">User ID</div><div class="info-value" id="userId">—</div></div></div>
+      </div>
 
-        <script src="main.js"></script>
+      <!-- About profile -->
+      <div class="profile-card about-card">
+        <p>Your profile is used to attach your name and contact information to civic issues you report. Municipal staff use this to follow up for more details.</p>
+        <p style="margin:0;">All issues you submit are automatically linked to the name, email, and phone shown above.</p>
+      </div>
+
+      <!-- Notifications -->
+      <div class="profile-card" id="notifSection">
+        <div class="profile-card-head"><h3><i class="fas fa-bell"></i> Notification Preferences</h3></div>
+        <div class="pref-row">
+          <div class="pref-info">
+            <div class="pref-label">Email updates for status changes</div>
+            <div class="pref-desc">Get emailed when your issue moves from pending to resolved</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="prefEmailUpdates" checked><div class="toggle-track"></div></label>
+        </div>
+        <div class="pref-row">
+          <div class="pref-info">
+            <div class="pref-label">SMS alerts for urgent civic alerts</div>
+            <div class="pref-desc">Receive text messages for urgent issues in your area</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="prefSmsAlerts" checked><div class="toggle-track"></div></label>
+        </div>
+        <div class="pref-row">
+          <div class="pref-info">
+            <div class="pref-label">Monthly CrowdCivics newsletter</div>
+            <div class="pref-desc">City updates, tips, and platform announcements</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="prefNewsletter"><div class="toggle-track"></div></label>
+        </div>
+        <div class="pref-row" style="border:none;padding-bottom:0;">
+          <div class="pref-info">
+            <div class="pref-label">Browser push notifications</div>
+            <div class="pref-desc">Real-time alerts directly in your browser</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="prefPush" checked><div class="toggle-track"></div></label>
+        </div>
+        <button class="btn-save" id="savePreferencesBtn" onclick="savePreferences()">
+          <i class="fas fa-save"></i> Save Preferences
+        </button>
+        <div id="prefMessage" class="inline-msg" style="display:none;"></div>
+      </div>
+
+      <!-- Security -->
+      <div class="profile-card" id="securitySection">
+        <div class="profile-card-head"><h3><i class="fas fa-lock"></i> Security — Update Password</h3></div>
+        <form id="updatePasswordForm" onsubmit="event.preventDefault(); updatePassword();" style="max-width:400px;">
+          <div class="form-field" style="position:relative;">
+            <label for="currentPassword">Current Password</label>
+            <input type="password" id="currentPassword" placeholder="Enter current password" required>
+            <button type="button" class="pw-toggle" id="toggle-curr" onclick="togglePassword('currentPassword','toggle-curr')">
+              <i class="far fa-eye"></i>
+            </button>
+          </div>
+          <div class="form-field" style="position:relative;">
+            <label for="newUpdatePassword">New Password</label>
+            <input type="password" id="newUpdatePassword" placeholder="Enter new password (min 6 chars)" required minlength="6">
+            <button type="button" class="pw-toggle" id="toggle-new" onclick="togglePassword('newUpdatePassword','toggle-new')">
+              <i class="far fa-eye"></i>
+            </button>
+          </div>
+          <div class="form-field" style="position:relative;">
+            <label for="confirmUpdatePassword">Confirm New Password</label>
+            <input type="password" id="confirmUpdatePassword" placeholder="Confirm new password" required>
+            <button type="button" class="pw-toggle" id="toggle-conf" onclick="togglePassword('confirmUpdatePassword','toggle-conf')">
+              <i class="far fa-eye"></i>
+            </button>
+          </div>
+          <button type="submit" class="btn-save" id="updatePasswordBtn">
+            <i class="fas fa-key"></i> Update Password
+          </button>
+          <div id="passwordUpdateMessage" class="inline-msg" style="display:none;margin-top:12px;"></div>
+        </form>
+      </div>
+
+      <div id="message" class="page-message" style="display:none;"></div>
+    </main>
+  </div>
+
+  <!-- Chat widget -->
+  <div class="chat-widget">
+    <div class="chat-fab">
+      <button class="chat-fab-btn" id="chatToggle"><i class="fas fa-comment-dots"></i></button>
+    </div>
+    <div id="chatWindow" class="chat-window" style="display:none;">
+      <div class="chat-header-bar">
+        <span>CrowdCivics Assistant</span>
+        <button id="chatClose" class="chat-close-btn">&times;</button>
+      </div>
+      <div id="chatMessages" class="chat-messages"></div>
+      <form id="chatForm" class="chat-form-bar">
+        <input id="chatInput" type="text" class="chat-input" placeholder="Ask about your account or reports..." autocomplete="off">
+        <button type="submit" class="chat-send-btn">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <div class="logo-text">Crowd<span>Civics</span></div>
+        <p style="color: #a0aec0; margin-top: 1rem; line-height: 1.6;">Empowering citizens to build better
+          cities together through transparency and collaboration.</p>
+        <div class="social-links" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+          <a href="#" style="color: var(--p1-gold); font-size: 1.2rem;"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" style="color: var(--p1-gold); font-size: 1.2rem;"><i class="fab fa-twitter"></i></a>
+          <a href="#" style="color: var(--p1-gold); font-size: 1.2rem;"><i class="fab fa-instagram"></i></a>
+          <a href="#" style="color: var(--p1-gold); font-size: 1.2rem;"><i class="fab fa-linkedin-in"></i></a>
+        </div>
+      </div>
+      <div>
+        <h3 class="footer-title">Quick Links</h3>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="#about">About Us</a></li>
+          <li><a href="login.html">Sign In</a></li>
+          <li><a href="register.html">Get Started</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="footer-title">Resources</h3>
+        <ul class="footer-links">
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+          <li><a href="#">Community Guidelines</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="footer-title">Contact Us</h3>
+        <ul class="footer-links">
+          <li><a href="mailto:support@crowdcivics.com"><i class="fas fa-envelope"
+                style="margin-right: 8px;"></i> support@crowdcivics.com</a></li>
+          <li><a href="#"><i class="fas fa-map-marker-alt" style="margin-right: 8px;"></i> 123 Civic Plaza,
+              Metropolis</a></li>
+          <li><a href="#"><i class="fas fa-phone" style="margin-right: 8px;"></i> +1 (555) 123-4567</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 CrowdCivics. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
 </body>
-
-</html>
+</html>

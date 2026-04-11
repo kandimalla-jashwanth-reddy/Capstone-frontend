@@ -1,105 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - CrowdCivics</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="index.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register – CrowdCivics</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="auth.css">
 </head>
+<body class="auth-bg">
 
-<body class="auth-page">
+    <div class="auth-split">
 
-    <div class="form-section">
-        <div class="form-container">
-            <div class="form active" id="registerForm">
-                <div id="message" class="message"></div>
-                <h2 class="form-title">Create Account</h2>
-                <p class="form-subtitle">Join CrowdCivics and start making a difference</p>
-
-                <form id="registerFormElement">
-                    <Div>Select who are you:</Div>
-                    <div class="user-type-buttons">
-                        <button class="user-type-btn active" id="customerBtn">
-                            <i class="fas fa-user"></i> Citizen
-                        </button>
-                        <button class="user-type-btn" id="sellerBtn">
-                            <i class="fas fa-store"></i> Municipal Staff
-                        </button>
-                    </div>
-
-                    <div class="input-group" id="adminIdGroup" style="display: none;">
-                        <label class="input-label" for="adminId">Government Unique ID</label>
-                        <input type="text" id="adminId" class="input-field" placeholder="Enter Government ID">
-                    </div>
-
-
-                    <div class="input-group">
-                        <label class="input-label" for="registerName">Full Name</label>
-                        <input type="text" id="registerName" class="input-field" placeholder="Full Name" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label" for="registerEmail">Email Address</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="email" id="registerEmail" class="input-field" placeholder="you@example.com"
-                                required style="flex: 1;">
-                            <button type="button" id="sendOtpBtn"
-                                style="padding: 0 15px; border-radius: 12px; border: 1px solid #f5c518; background: #f5c518; cursor: pointer; font-weight: 600; color: #0b1628;">Send
-                                OTP</button>
-                        </div>
-                    </div>
-
-                    <div class="input-group" id="otpGroup" style="display: none;">
-                        <label class="input-label" for="otpInput">Enter OTP</label>
-                        <input type="text" id="otpInput" class="input-field" placeholder="Enter 6-digit OTP"
-                            maxlength="6">
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label" for="mobileNumber">Mobile Number</label>
-                        <input type="tel" id="mobileNumber" class="input-field" placeholder="Enter your mobile number"
-                            required>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label" for="registerPassword">Password</label>
-                        <input type="password" id="registerPassword" class="input-field"
-                            placeholder="Create a strong password" required>
-                        <button type="button" class="password-toggle" id="toggleRegisterPassword">
-                            <i class="far fa-eye"></i>
-                        </button>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label" for="confirmPassword">Confirm Password</label>
-                        <input type="password" id="confirmPassword" class="input-field"
-                            placeholder="Confirm your password" required>
-                    </div>
-
-                    <div class="form-options">
-                        <div class="remember-me">
-                            <input type="checkbox" id="termsAgreement" required>
-                            <label for="termsAgreement">I agree to the <a href="#" style="color: #1a3a8f;">Terms of
-                                    Service</a> and <a href="#" style="color: #1a3a8f;">Privacy Policy</a></label>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="submit-btn" id="registerBtn">Create Account</button>
-                </form>
-
-
-                <div class="form-footer">
-                    Already have an account? <a href="login.html" id="switchToLogin">Sign in here</a>
-                </div>
+      <!-- Left panel -->
+      <div class="auth-left">
+        <div class="auth-left-glow"></div>
+        <div class="auth-left-top">
+          <a href="index.html" class="auth-brand">
+            <div class="brand-mark">
+              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#f5c518" stroke-width="2" stroke-linejoin="round"/>
+                <circle cx="12" cy="9" r="2" fill="#f5c518"/>
+              </svg>
             </div>
+            <span style="font-family:var(--font-head);font-weight:800;font-size:1.1rem;color:#fff;">CrowdCivics</span>
+          </a>
+          <h2>Join the<br>movement for<br><em>better cities.</em></h2>
+          <p>Thousands of citizens are already making a difference. Add your voice today.</p>
         </div>
+        <div class="auth-steps">
+          <div class="auth-step"><div class="step-badge">1</div><div><strong>Create Account</strong><span>Quick 2-min setup, verify email via OTP</span></div></div>
+          <div class="auth-step"><div class="step-badge">2</div><div><strong>Report Your First Issue</strong><span>Take a photo, pin location, submit</span></div></div>
+          <div class="auth-step"><div class="step-badge">3</div><div><strong>Watch It Get Fixed</strong><span>Track resolution in real time</span></div></div>
+        </div>
+      </div>
+
+      <!-- Right form panel -->
+      <div class="auth-right">
+        <div class="auth-logo-row">
+          <div class="brand-mark">
+            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#f5c518" stroke-width="2" stroke-linejoin="round"/>
+              <circle cx="12" cy="9" r="2" fill="#f5c518"/>
+            </svg>
+          </div>
+        </div>
+        <h3>Create Account</h3>
+        <p class="auth-tagline">Join CrowdCivics and start making a difference</p>
+
+        <div id="registerMessage" class="auth-message" style="display:none;"></div>
+
+        <!-- User type -->
+        <div class="user-type-row">
+          <div class="user-type-opt active" id="typeCustomer" onclick="selectType('customer')">
+            <i class="fas fa-user"></i><span>Citizen</span>
+          </div>
+          <div class="user-type-opt" id="typeStaff" onclick="selectType('staff')">
+            <i class="fas fa-landmark"></i><span>Municipal Staff</span>
+          </div>
+        </div>
+
+        <!-- Admin ID (shown for staff) -->
+        <div class="form-field admin-id-group" id="adminIdGroup">
+          <label for="adminId">Government Unique ID</label>
+          <input type="text" id="adminId" placeholder="Enter your 8-digit Government ID">
+        </div>
+
+        <div class="form-field admin-id-group" id="adminDeptGroup">
+          <label for="adminDept">Department</label>
+          <select id="adminDept">
+            <option value="" disabled selected>Select Department</option>
+            <option value="Roads & Transport">Roads & Transport</option>
+            <option value="Water Supply">Water Supply</option>
+            <option value="Electricity & Streetlights">Electricity & Streetlights</option>
+            <option value="Waste Management">Waste Management</option>
+            <option value="Parks & Horticulture">Parks & Horticulture</option>
+            <option value="Health & Sanitation">Health & Sanitation</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <form id="registerForm" onsubmit="handleRegister(event)">
+          <div class="form-field">
+            <label for="registerName">Full Name</label>
+            <input type="text" id="registerName" placeholder="Your full name" required>
+          </div>
+
+          <div class="form-field">
+            <label for="registerEmail">Email Address</label>
+            <div class="otp-row">
+              <input type="email" id="registerEmail" placeholder="you@example.com" required>
+              <button type="button" class="btn-otp" id="sendOtpBtn" onclick="sendOtp()">Send OTP</button>
+            </div>
+          </div>
+
+          <!-- OTP input (hidden until sent) -->
+          <div class="form-field" id="otpGroup" style="display:none;">
+            <label for="otpInput">Enter OTP</label>
+            <input type="text" id="otpInput" placeholder="Enter 6-digit OTP" maxlength="6">
+            <small style="font-size:0.75rem;color:var(--slate);margin-top:5px;display:block;">Check your email inbox for the OTP</small>
+          </div>
+
+          <div class="form-field">
+            <label for="mobileNumber">Mobile Number</label>
+            <input type="tel" id="mobileNumber" placeholder="+91 98765 43210" required>
+          </div>
+
+          <div class="form-field" style="position:relative;">
+            <label for="registerPassword">Password</label>
+            <input type="password" id="registerPassword" placeholder="Create a strong password" required minlength="6">
+            <button type="button" class="pw-toggle" id="pwToggle1" onclick="togglePassword('registerPassword','pwToggle1')">
+              <i class="far fa-eye"></i>
+            </button>
+          </div>
+
+          <div class="form-field">
+            <label for="confirmPassword">Confirm Password</label>
+            <input type="password" id="confirmPassword" placeholder="Confirm your password" required>
+          </div>
+
+          <label class="remember-label" style="margin-bottom:20px;">
+            <input type="checkbox" id="termsAgreement" required>
+            I agree to the <a href="#" style="color:var(--navy);font-weight:700;">Terms of Service</a> and <a href="#" style="color:var(--navy);font-weight:700;">Privacy Policy</a>
+          </label>
+
+          <button type="submit" class="auth-submit-btn" id="registerBtn">
+            Create Account <i class="fas fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <p class="auth-switch">Already have an account? <a href="login.html">Sign in here</a></p>
+      </div>
+
     </div>
 
-    <script src="main.js"></script>
+  <script src="main.js"></script>
 </body>
-
 </html>

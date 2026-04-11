@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Profile – CrowdCivics</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="profile.css">
+</head>
+<body>
+
+  <!-- ── NAVBAR ── -->
+  <nav class="dash-nav">
+    <div class="dash-nav-left">
+      <a href="index.html" class="dash-brand">
+        <span class="dash-brand-dot"></span>CrowdCivics
+      </a>
+      <div class="dash-greeting">Hi, <strong id="userNameHeader">Administrator</strong> 👋</div>
+    </div>
+    <div class="dash-nav-right">
+      <a href="admin.html" class="dash-nav-link"><i class="fas fa-tools"></i> Admin Panel</a>
+      <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </nav>
+
+  <!-- ── LAYOUT ── -->
+  <div class="profile-layout">
+
+    <!-- Left: avatar card -->
+    <aside class="profile-sidebar">
+      <div class="profile-avatar-card">
+        <div class="profile-avatar" id="profileAvatar">A</div>
+        <div class="profile-name" id="profileHeaderName">Loading...</div>
+        <div class="profile-email-text" id="profileEmailDisplay">—</div>
+        <span class="status-pill progress" style="margin:4px 0 20px;"><i class="fas fa-shield-alt"></i> Verified Administrator</span>
+      </div>
+
+      <div class="profile-nav-card">
+        <a href="#accountSection" class="profile-nav-link active"><i class="fas fa-user-shield"></i> Account Info</a>
+        <a href="#securitySection" class="profile-nav-link"><i class="fas fa-lock"></i> Security</a>
+      </div>
+    </aside>
+
+    <!-- Right: cards -->
+    <main class="profile-main">
+
+      <!-- Account Info -->
+      <div class="profile-card" id="accountSection">
+        <div class="profile-card-head">
+          <h3><i class="fas fa-user-shield"></i> Administrator Information</h3>
+        </div>
+        <div class="info-row" id="row-name">
+          <div class="info-icon"><i class="fas fa-user"></i></div>
+          <div>
+            <div class="info-label">Full Name</div>
+            <div class="info-value" id="userName">Loading...</div>
+            <div class="inline-input-container">
+              <input type="text" class="inline-input" id="edit-name">
+              <button class="btn-save-inline" onclick="saveProfileField('name')"><i class="fas fa-check"></i></button>
+              <button class="btn-cancel-inline" onclick="toggleEditMode('name')"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+          <i class="fas fa-pencil-alt edit-icon" onclick="toggleEditMode('name')"></i>
+        </div>
+        <div class="info-row" id="row-email">
+          <div class="info-icon"><i class="fas fa-envelope"></i></div>
+          <div>
+            <div class="info-label">Email Address</div>
+            <div class="info-value" id="userEmail">—</div>
+          </div>
+        </div>
+        <div class="info-row" id="row-phone">
+          <div class="info-icon"><i class="fas fa-phone"></i></div>
+          <div>
+            <div class="info-label">Mobile Number</div>
+            <div class="info-value" id="userPhone">—</div>
+            <div class="inline-input-container">
+              <input type="tel" class="inline-input" id="edit-phone">
+              <button class="btn-save-inline" onclick="saveProfileField('phone')"><i class="fas fa-check"></i></button>
+              <button class="btn-cancel-inline" onclick="toggleEditMode('phone')"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+          <i class="fas fa-pencil-alt edit-icon" onclick="toggleEditMode('phone')"></i>
+        </div>
+        <div class="info-row"><div class="info-icon"><i class="fas fa-id-card"></i></div><div><div class="info-label">User ID</div><div class="info-value" id="userId">—</div></div></div>
+        <div class="info-row"><div class="info-icon"><i class="fas fa-building"></i></div><div><div class="info-label">Department</div><div class="info-value" id="userDept">—</div></div></div>
+        <div class="info-row"><div class="info-icon"><i class="fas fa-id-badge"></i></div><div><div class="info-label">Government ID</div><div class="info-value" id="userGovId">—</div></div></div>
+      </div>
+
+      <!-- About profile -->
+      <div class="profile-card about-card">
+        <p>This administrator profile grants you access to view and manage civic issues reported by citizens. Your actions within the portal are linked to this official account.</p>
+        <p style="margin:0;">Keep your credentials secure and ensure your contact details are up to date for official communication.</p>
+      </div>
+
+      <!-- Security -->
+      <div class="profile-card" id="securitySection">
+        <div class="profile-card-head"><h3><i class="fas fa-lock"></i> Security — Update Password</h3></div>
+        <form id="updatePasswordForm" onsubmit="event.preventDefault(); updatePassword();" style="max-width:400px;">
+          <div class="form-field" style="position:relative;">
+            <label for="currentPassword">Current Password</label>
+            <input type="password" id="currentPassword" placeholder="Enter current password" required>
+            <button type="button" class="pw-toggle" id="toggle-curr" onclick="togglePassword('currentPassword','toggle-curr')">
+              <i class="far fa-eye"></i>
+            </button>
+          </div>
+          <div class="form-field" style="position:relative;">
+            <label for="newUpdatePassword">New Password</label>
+            <input type="password" id="newUpdatePassword" placeholder="Enter new password (min 6 chars)" required minlength="6">
+            <button type="button" class="pw-toggle" id="toggle-new" onclick="togglePassword('newUpdatePassword','toggle-new')">
+              <i class="far fa-eye"></i>
+            </button>
+          </div>
+          <div class="form-field" style="position:relative;">
+            <label for="confirmUpdatePassword">Confirm New Password</label>
+            <input type="password" id="confirmUpdatePassword" placeholder="Confirm new password" required>
+            <button type="button" class="pw-toggle" id="toggle-conf" onclick="togglePassword('confirmUpdatePassword','toggle-conf')">
+              <i class="far fa-eye"></i>
+            </button>
+          </div>
+          <button type="submit" class="btn-save" id="updatePasswordBtn">
+            <i class="fas fa-key"></i> Update Password
+          </button>
+          <div id="passwordUpdateMessage" class="inline-msg" style="display:none;margin-top:12px;"></div>
+        </form>
+      </div>
+
+      <div id="message" class="page-message" style="display:none;"></div>
+    </main>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <div class="logo-text">Crowd<span>Civics</span></div>
+        <p style="color: #a0aec0; margin-top: 1rem; line-height: 1.6;">Official Administrator Portal for civic management and citizen collaboration.</p>
+      </div>
+      <div>
+        <h3 class="footer-title">Quick Links</h3>
+        <ul class="footer-links">
+          <li><a href="admin.html">Admin Dashboard</a></li>
+          <li><a href="mailto:support@crowdcivics.com">Internal Support</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 CrowdCivics. Official Use Only.</p>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Shared profile loading from main.js
+        loadProfileData(); 
+        
+        // Final security check
+        const userRole = localStorage.getItem('userRole');
+        if (userRole !== 'ADMIN') {
+            window.location.href = 'login.html';
+        }
+    });
+  </script>
+</body>
+</html>

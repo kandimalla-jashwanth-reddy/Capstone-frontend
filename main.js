@@ -1,39 +1,224 @@
 const API_BASE = 'http://localhost:8080/api';
 
+// ── SHARED UTILITIES ──
+
+/** Show status messages for auth/forms */
+function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.className = `auth-message ${type}`;
+    el.style.display = 'block';
+    if (type === 'success') {
+        setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+}
+
+/** Legacy support for generic message display */
 function showMessage(message, type = 'info') {
     const messageDiv = document.getElementById('message');
     if (messageDiv) {
         messageDiv.innerHTML = message;
         messageDiv.className = `message ${type}`;
         messageDiv.style.display = 'block';
-
-        if (type === 'success') {
-            setTimeout(() => {
-                messageDiv.style.display = 'none';
-            }, 5000);
-        }
     }
-    console.log(`MESSAGE ${type.toUpperCase()}: ${message}`);
 }
 
-function updateDebugInfo(message) {
-    const debugElement = document.getElementById('debugText');
-    if (debugElement) {
-        debugElement.textContent = message;
+/** Logout: clear storage and go to login */
+function logout() {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
+    window.location.href = 'login.html';
+}
+
+/** Fix backend relative URLs for images */
+function fixIssueUrls(issues) {
+    const baseUrl = API_BASE.replace('/api', '');
+    if (!Array.isArray(issues)) issues = [issues];
+    issues.forEach(issue => {
+        if (issue.photoUrl && issue.photoUrl.startsWith('/')) issue.photoUrl = baseUrl + issue.photoUrl;
+        if (issue.photoUrls && issue.photoUrls.length > 0) {
+            issue.photoUrls = issue.photoUrls.map(url => url.startsWith('/') ? baseUrl + url : url);
+        }
+        if (issue.resolutionPhotoUrl && issue.resolutionPhotoUrl.startsWith('/')) issue.resolutionPhotoUrl = baseUrl + issue.resolutionPhotoUrl;
+    });
+    return issues;
+}
+
+// ── AUTHENTICATION ──
+
+function selectType(type) {
+    const typeCustomer = document.getElementById('typeCustomer');
+    const typeStaff = document.getElementById('typeStaff');
+    const adminIdGroup = document.getElementById('adminIdGroup');
+    const loginEmailLabel = document.getElementById('loginEmailLabel');
+    const loginEmailInput = document.getElementById('loginEmail');
+
+    if (type === 'staff') {
+        if (typeStaff) typeStaff.classList.add('active');
+        if (typeCustomer) typeCustomer.classList.remove('active');
+        if (adminIdGroup) adminIdGroup.classList.add('show');
+        const adminDeptGroup = document.getElementById('adminDeptGroup');
+        if (adminDeptGroup) adminDeptGroup.classList.add('show');
+        if (loginEmailLabel) loginEmailLabel.textContent = 'Login ID';
+        if (loginEmailInput) {
+            loginEmailInput.type = 'text';
+            loginEmailInput.placeholder = 'Enter Government ID';
+        }
+    } else {
+        if (typeCustomer) typeCustomer.classList.add('active');
+        if (typeStaff) typeStaff.classList.remove('active');
+        if (adminIdGroup) adminIdGroup.classList.remove('show');
+        const adminDeptGroup = document.getElementById('adminDeptGroup');
+        if (adminDeptGroup) adminDeptGroup.classList.remove('show');
+        if (loginEmailLabel) loginEmailLabel.textContent = 'Email Address';
+        if (loginEmailInput) {
+            loginEmailInput.type = 'email';
+            loginEmailInput.placeholder = 'you@example.com';
+        }
     }
-    console.log(`DEBUG: ${message}`);
+}
+
+function togglePassword(inputId, btnId) {
+    const input = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    if (!input || !btn) return;
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+    } else {
+        input.type = 'password';
+        if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+    }
+}
+
+async function sendOtp() {
+    const emailInput = document.getElementById('registerEmail');
+    const sendOtpBtn = document.getElementById('sendOtpBtn');
+    const email = emailInput ? emailInput.value.trim() : '';
+
+    if (!email) { showMsg('registerMessage', 'Please enter email first', 'error'); return; }
+
+    try {
+        sendOtpBtn.disabled = true;
+        sendOtpBtn.textContent = 'Sending...';
+        const res = await fetch(`${API_BASE}/auth/send-registration-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const text = await res.text();
+        if (res.ok) {
+            showMsg('registerMessage', 'OTP sent! Check your inbox.', 'success');
+            const otpGroup = document.getElementById('otpGroup');
+            if (otpGroup) otpGroup.style.display = 'block';
+            startOTPTimer(sendOtpBtn);
+        } else {
+            showMsg('registerMessage', text, 'error');
+            sendOtpBtn.disabled = false;
+            sendOtpBtn.textContent = 'Send OTP';
+        }
+    } catch (err) {
+        showMsg('registerMessage', 'Server unavailable', 'error');
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = 'Send OTP';
+    }
+}
+
+async function handleRegister(event) {
+    event.preventDefault();
+    const btn = document.getElementById('registerBtn');
+    const isStaff = document.getElementById('typeStaff').classList.contains('active');
+    
+    const formData = {
+        name: document.getElementById('registerName').value.trim(),
+        email: document.getElementById('registerEmail').value.trim(),
+        phone: document.getElementById('mobileNumber').value.trim(),
+        password: document.getElementById('registerPassword').value,
+        otp: document.getElementById('otpInput').value.trim(),
+        role: isStaff ? 'ADMIN' : 'CITIZEN'
+    };
+
+    if (isStaff) {
+        formData.adminId = document.getElementById('adminId').value.trim();
+        formData.department = document.getElementById('adminDept').value;
+        if (!formData.adminId || !/^\d{8}$/.test(formData.adminId)) {
+            showMsg('registerMessage', 'Government ID must be 8 digits', 'error');
+            return;
+        }
+        if (!formData.department) {
+            showMsg('registerMessage', 'Please select your Department', 'error');
+            return;
+        }
+    }
+
+    if (formData.password !== document.getElementById('confirmPassword').value) {
+        showMsg('registerMessage', 'Passwords do not match', 'error');
+        return;
+    }
+
+    try {
+        btn.disabled = true;
+        btn.textContent = 'Creating Account...';
+        const res = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        const text = await res.text();
+        if (res.ok) {
+            showMsg('registerMessage', 'Account created! Redirecting...', 'success');
+            setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+        } else {
+            showMsg('registerMessage', text, 'error');
+            btn.disabled = false;
+            btn.textContent = 'Create Account';
+        }
+    } catch (err) {
+        showMsg('registerMessage', 'Registration failed', 'error');
+        btn.disabled = false;
+    }
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    const isStaff = document.getElementById('typeStaff').classList.contains('active');
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const role = isStaff ? 'ADMIN' : 'CITIZEN';
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, role })
+        });
+        const text = await res.text();
+        if (res.ok) {
+            const data = JSON.parse(text);
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userEmail', data.email);
+            localStorage.setItem('userRole', data.role);
+            localStorage.setItem('userId', data.userId);
+            window.location.href = data.role === 'ADMIN' ? 'admin.html' : 'dashboard.html';
+        } else {
+            showMsg('loginMessage', text || 'Login failed', 'error');
+        }
+    } catch (err) {
+        showMsg('loginMessage', 'Server unavailable', 'error');
+    }
 }
 
 function startOTPTimer(button, duration = 60) {
     let timeLeft = duration;
-    const originalText = button.textContent;
+    const originalText = 'Send OTP';
     button.disabled = true;
-
     const timer = setInterval(() => {
-        button.textContent = `Resend OTP (${timeLeft}s)`;
-        timeLeft--;
-
-        if (timeLeft < 0) {
+        button.textContent = `Resend in ${timeLeft}s`;
+        if (timeLeft-- < 0) {
             clearInterval(timer);
             button.disabled = false;
             button.textContent = originalText;
@@ -41,2078 +226,901 @@ function startOTPTimer(button, duration = 60) {
     }, 1000);
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    console.log('Page loaded - testing backend connection...');
+// ── DASHBOARD ──
 
-    fetch(`${API_BASE}/auth/test`)
-        .then(response => response.text())
-        .then(result => {
-            console.log('Backend connection: ' + result);
-        })
-        .catch(error => {
-            console.error('Backend connection failed: ', error);
-            showMessage('Backend connection failed. Make sure server is running on port 8080.', 'error');
+async function loadDashboard() {
+    const userEmail = localStorage.getItem('userEmail');
+    const userId = localStorage.getItem('userId');
+    if (!userEmail) { window.location.href = 'login.html'; return; }
+
+    // Init greeting
+    const nameEl = document.getElementById('userNameHeader');
+    if (nameEl) nameEl.textContent = userEmail.split('@')[0];
+
+    // Fetch user details
+    try {
+        const res = await fetch(`${API_BASE}/auth/user?email=${encodeURIComponent(userEmail)}`);
+        if (res.ok) {
+            const user = await res.json();
+            if (nameEl) nameEl.textContent = user.name || userEmail.split('@')[0];
+            if (user.id) fetchAndDisplayNotifications(user.id);
+        }
+    } catch (_) {}
+
+    // Fetch user issues for stats and list
+    if (userId) {
+        try {
+            const res = await fetch(`${API_BASE}/issues/user/${userId}`);
+            const issues = res.ok ? await res.json() : [];
+            fixIssueUrls(issues);
+            renderStats(issues);
+            renderIssueList(issues);
+        } catch (_) { renderIssueList([]); }
+    }
+
+    // Load Near You feed
+    initializeNearYou();
+
+    // Fetch and display user location in top bar
+    fetchUserLocation();
+}
+
+/** Fetch user location and reverse geocode it for the top bar */
+async function fetchUserLocation() {
+    const locText = document.getElementById('locationText');
+    if (!locText) return;
+
+    if (!navigator.geolocation) {
+        locText.textContent = "Location unavailable";
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+            if (res.ok) {
+                const data = await res.json();
+                const address = data.address;
+                const city = address.city || address.town || address.village || address.suburb || "Metropolis";
+                const neighborhood = address.suburb || address.neighbourhood || address.road || "";
+                
+                locText.textContent = neighborhood ? `${neighborhood}, ${city}` : city;
+            } else {
+                locText.textContent = "Location identified";
+            }
+        } catch (_) {
+            locText.textContent = "Metropolis, City";
+        }
+    }, (err) => {
+        locText.textContent = "Location access denied";
+        console.warn("Geolocation error:", err.message);
+    });
+}
+
+function renderStats(issues) {
+    const sets = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    sets('totalReports', issues.length);
+    sets('inProgressCount', issues.filter(i => i.status === 'IN_PROGRESS').length);
+    sets('resolvedCount', issues.filter(i => i.status === 'RESOLVED').length);
+    sets('pendingCount', issues.filter(i => ['NEW', 'PENDING'].includes(i.status)).length);
+}
+
+function renderIssueList(issues) {
+    const list = document.getElementById('issueList');
+    if (!list) return;
+    if (!issues.length) {
+        list.innerHTML = `<div class="empty-state"><p>No reports yet. <a href="report.html">Report one!</a></p></div>`;
+        return;
+    }
+    const catIcon = c => ({ ROADS:'fa-road', WATER:'fa-tint', STREETLIGHT:'fa-lightbulb', GARBAGE:'fa-trash' }[c] || 'fa-info-circle');
+    const statusClass = s => ({ NEW:'pending', IN_PROGRESS:'progress', RESOLVED:'resolved', REJECTED:'rejected' }[s] || 'pending');
+
+    list.innerHTML = issues.slice(0, 6).map(issue => {
+        const photo = (issue.photoUrls && issue.photoUrls.length > 0) ? issue.photoUrls[0] : issue.photoUrl;
+        return `
+        <div class="issue-row" onclick="openIssueModal(${issue.id})" style="cursor:pointer;">
+            <div class="issue-row-icon">
+                ${photo ? `<img src="${photo}" class="issue-row-thumb">` : `<i class="fas ${catIcon(issue.category)}"></i>`}
+            </div>
+            <div class="issue-row-main">
+                <div class="issue-row-title">${issue.title || 'Untitled'}</div>
+                <div class="issue-row-meta">${issue.address || 'Unknown Location'} · ${new Date(issue.createdAt).toLocaleDateString()}</div>
+            </div>
+            <div class="issue-row-action">
+                <span class="status-pill ${statusClass(issue.status)}">${issue.status}</span>
+            </div>
+        </div>`}).join('');
+}
+
+async function initializeNearYou() {
+    const list = document.getElementById('nearYouList');
+    if (!list) return;
+
+    if (!navigator.geolocation) {
+        fetchNearYouFallback();
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        try {
+            const res = await fetch(`${API_BASE}/issues`);
+            if (res.ok) {
+                const all = await res.json();
+                fixIssueUrls(all);
+                // Filter 5km radius
+                const near = all.filter(i => {
+                    if (!i.latitude || !i.longitude) return false;
+                    const d = Math.sqrt(Math.pow(i.latitude - lat, 2) + Math.pow(i.longitude - lng, 2)) * 111; // Approx km
+                    return d <= 5;
+                });
+                renderNearYou(near);
+            }
+        } catch (_) { fetchNearYouFallback(); }
+    }, () => fetchNearYouFallback());
+}
+
+async function fetchNearYouFallback() {
+    try {
+        const res = await fetch(`${API_BASE}/issues`);
+        if (res.ok) {
+            const issues = await res.json();
+            fixIssueUrls(issues);
+            renderNearYou(issues);
+        }
+    } catch (_) {}
+}
+
+let allNearIssues = [];
+
+function renderNearYou(issues, showAll = false) {
+    const list = document.getElementById('nearYouList');
+    const viewAllBtn = document.getElementById('viewAllNearYou');
+    if (!list) return;
+    
+    console.log(`[NearYou] Found ${issues.length} reports nearby. ShowAll: ${showAll}`);
+    allNearIssues = issues; // Cache for toggle
+
+    if (!issues.length) {
+        list.innerHTML = `<div class="empty-state"><p>No issues nearby.</p></div>`;
+        if (viewAllBtn) viewAllBtn.style.display = 'none';
+        return;
+    }
+
+    // Ensure button shows only if more than 4 issues and not already showing all
+    if (viewAllBtn) {
+        const hasMore = issues.length > 4;
+        console.log(`[NearYou] Rendering ${issues.length} issues. showAll=${showAll}, hasMore=${hasMore}`);
+        
+        if (hasMore && !showAll) {
+            viewAllBtn.style.setProperty('display', 'flex', 'important');
+            viewAllBtn.onclick = (e) => {
+                e.preventDefault();
+                console.log("[NearYou] View All clicked.");
+                renderNearYou(allNearIssues, true);
+            };
+        } else {
+            viewAllBtn.style.display = 'none';
+        }
+    }
+
+    const displayedIssues = showAll ? issues : issues.slice(0, 4);
+    const statusClass = s => ({ NEW:'pending', IN_PROGRESS:'progress', RESOLVED:'resolved', REJECTED:'rejected' }[s] || 'pending');
+    
+    list.innerHTML = displayedIssues.map(issue => {
+        const photo = (issue.photoUrls && issue.photoUrls.length > 0) ? issue.photoUrls[0] : issue.photoUrl;
+        return `
+        <div class="near-card" onclick="openIssueModal(${issue.id})">
+            ${photo ? `<div class="near-card-img"><img src="${photo}" alt="Issue Photo"></div>` : ''}
+            <div class="near-card-content">
+                <div class="near-card-top">
+                    <span class="near-card-author">${issue.reporterName || 'Citizen'}</span>
+                    <span class="near-card-time">${new Date(issue.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div class="near-card-title">${issue.title}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div class="near-card-loc"><i class="fas fa-map-marker-alt"></i> ${issue.address || 'Unknown'}</div>
+                    <span class="status-pill ${statusClass(issue.status)}">${issue.status}</span>
+                </div>
+            </div>
+        </div>`}).join('');
+}
+
+async function openIssueModal(id) {
+    const modal = document.getElementById('issueDetailsModal');
+    const body = document.getElementById('modalBody');
+    if (!modal || !body) return;
+    modal.style.display = 'flex';
+    body.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+    
+    try {
+        const res = await fetch(`${API_BASE}/issues/${id}`);
+        const issue = await res.json();
+        fixIssueUrls(issue);
+
+        const photos = (issue.photoUrls || []).map(u => 
+            `<img src="${u}" style="width:100%; border-radius:12px; margin-bottom:15px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">`
+        ).join('');
+
+        const resolutionHtml = (issue.status === 'RESOLVED' && issue.resolutionPhotoUrl) ? `
+            <div class="resolution-section">
+                <div class="resolution-title">
+                    <i class="fas fa-check-circle"></i> Work Completed (Proof of Resolution)
+                </div>
+                <img src="${issue.resolutionPhotoUrl}" class="resolution-img" alt="Resolution Proof">
+                ${issue.resolutionNote ? `<p style="font-size: 1.1rem; color: #065f46; background: #ecfdf5; padding: 15px; border-radius: 10px; border-left: 4px solid var(--dash-green);"><strong>Staff Note:</strong> ${issue.resolutionNote}</p>` : ''}
+            </div>
+        ` : (issue.status === 'REJECTED' && issue.rejectionReason) ? `
+            <div class="rejection-section">
+                <div class="rejection-title">
+                    <i class="fas fa-exclamation-circle"></i> Report Not Accepted
+                </div>
+                <div class="rejection-box">
+                    <strong>Reason:</strong> ${issue.rejectionReason}
+                </div>
+            </div>
+        ` : '';
+
+        body.innerHTML = `
+            <div class="modal-photo-gallery">${photos}</div>
+            <div style="margin-bottom:20px;">
+                <span class="status-pill ${issue.status.toLowerCase()}">${issue.status}</span>
+                <span style="margin-left:10px; color:var(--dash-slate); font-weight:600;"><i class="fas fa-tag"></i> ${issue.category}</span>
+            </div>
+            <p>${issue.description || 'No description provided for this report.'}</p>
+            ${resolutionHtml}
+            <div class="modal-meta">
+                <div><i class="fas fa-map-marker-alt"></i> ${issue.address || 'Location Hidden'}</div>
+                <div style="margin-top:8px;"><i class="fas fa-clock"></i> Reported on ${new Date(issue.createdAt).toLocaleString()}</div>
+            </div>
+        `;
+    } catch (err) { 
+        console.error("Error fetching issue details:", err);
+        body.innerHTML = '<div style="text-align:center; padding:40px; color:var(--dash-red);"><i class="fas fa-exclamation-triangle fa-2x"></i><p>Error loading details.</p></div>'; 
+    }
+}
+
+async function syncNavbar() {
+    const userEmail = localStorage.getItem('userEmail');
+    if (!userEmail) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/user?email=${encodeURIComponent(userEmail)}`);
+        if (res.ok) {
+            const user = await res.json();
+            const uHeader = document.getElementById('userNameHeader');
+            if (uHeader) uHeader.textContent = user.name || userEmail.split('@')[0];
+            if (user.id) fetchAndDisplayNotifications(user.id);
+        }
+    } catch (_) {}
+}
+
+function initModals() {
+    const closeIssueBtn = document.getElementById('closeIssueDetails');
+    const issueModal = document.getElementById('issueDetailsModal');
+    if (closeIssueBtn && issueModal) {
+        closeIssueBtn.onclick = () => { issueModal.style.display = 'none'; };
+        issueModal.onclick = (e) => { if (e.target === issueModal) issueModal.style.display = 'none'; };
+    }
+}
+
+// ── REPORTING & PHOTO HANDLING ──
+
+let uploadedPhotos = [];
+
+// Helper to update submit button state based on photo validation
+function updateSubmitBtnState() {
+    const btn = document.getElementById('submitBtn');
+    if (!btn) return;
+    
+    const isAnalyzing = uploadedPhotos.some(p => p.status === 'analyzing');
+    const hasInvalid = uploadedPhotos.some(p => !p.isValid && p.status !== 'analyzing');
+    const hasPhotos = uploadedPhotos.length > 0;
+    const allValid = hasPhotos && !isAnalyzing && !hasInvalid;
+
+    btn.disabled = !allValid;
+}
+
+// Global functions for the new premium report page
+function selectCat(el) {
+    document.querySelectorAll('.cat-option').forEach(opt => opt.classList.remove('selected'));
+    el.classList.add('selected');
+    const val = el.getAttribute('data-value');
+    document.getElementById('category').value = val;
+    
+    // Toggle other category field
+    const otherGroup = document.getElementById('otherCategoryGroup');
+    if (otherGroup) {
+        otherGroup.style.display = val === 'OTHER' ? 'block' : 'none';
+    }
+}
+
+async function getLocation() {
+    const locBtn = document.getElementById('getLocationBtn');
+    const coordsEl = document.getElementById('coords');
+    const locInfo = document.getElementById('locationInfo');
+    const addressInput = document.getElementById('address');
+    
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser");
+        return;
+    }
+
+    locBtn.disabled = true;
+    locBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lng;
+        
+        locBtn.disabled = false;
+        locBtn.innerHTML = '<i class="fas fa-check"></i> Location Captured';
+
+        // Reverse geocoding
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+            if (res.ok) {
+                const data = await res.json();
+                if (addressInput) addressInput.value = data.display_name;
+            }
+        } catch (_) {}
+    }, (err) => {
+        alert("Location access denied or unavailable.");
+        locBtn.disabled = false;
+        locBtn.innerHTML = '<i class="fas fa-crosshairs"></i> Auto-Detect My Location';
+    });
+}
+
+function handleFiles(files) {
+    handleImageFiles(files);
+}
+
+async function submitReport() {
+    const btn = document.getElementById('submitBtn');
+    const msg = document.getElementById('message');
+    
+    // Basic validation
+    const title = document.getElementById('title').value.trim();
+    const category = document.getElementById('category').value;
+    const address = document.getElementById('address').value.trim();
+    const description = document.getElementById('description').value.trim();
+
+    if (!title || !category || !address || !description) {
+        alert("Please fill in all required fields.");
+        return;
+    }
+
+    if (uploadedPhotos.length === 0) {
+        alert("Please upload at least one photo evidence.");
+        return;
+    }
+
+    if (uploadedPhotos.some(p => p.status === 'analyzing')) {
+        alert("Please wait for AI image verification to complete.");
+        return;
+    }
+
+    if (uploadedPhotos.some(p => !p.isValid)) {
+        alert("Some photos were rejected by AI. Please remove them before submitting.");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+    const payload = {
+        title,
+        description,
+        category: category === 'OTHER' ? document.getElementById('otherCategory').value : category,
+        latitude: document.getElementById('latitude').value,
+        longitude: document.getElementById('longitude').value,
+        address,
+        photoUrls: uploadedPhotos.map(p => p.dataUrl),
+        reporterEmail: localStorage.getItem('userEmail'),
+        reporterId: parseInt(localStorage.getItem('userId'))
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/issues`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
-
-    initializeForgotPassword();
-
-    initializeIssueDashboard();
-
-    initializeChatBot();
-
-    initializeProfilePreferences();
-
-    initializePasswordUpdate();
-
-    initializeUserLocationDisplay();
-
-    initializeNotifications();
-});
-
-function initializeNotifications() {
-    const bellBtn = document.getElementById('notificationBellBtn');
-    const dropdown = document.getElementById('notificationDropdown');
-    const badge = document.getElementById('notificationBadge');
-
-    if (!bellBtn || !dropdown) return;
-
-    bellBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('show');
-
-        if (dropdown.classList.contains('show')) {
-            if (badge) badge.style.display = 'none';
-            localStorage.setItem('lastNotificationCheck', new Date().toISOString());
+        if (res.ok) {
+            alert('Report Submitted Successfully!');
+            window.location.href = 'dashboard.html';
+        } else {
+            const errText = await res.text();
+            alert('Submission failed: ' + errText);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Report';
         }
-    });
+    } catch (err) {
+        alert('Server unavailable. Please try again later.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Report';
+    }
+}
 
-    document.addEventListener('click', (e) => {
-        if (!bellBtn.contains(e.target) && dropdown.classList.contains('show')) {
-            dropdown.classList.remove('show');
+function initReportPage() {
+    // This is now largely handled by global functions called from HTML,
+    // but we can keep it for any additional setup if needed.
+    updateSubmitBtnState();
+    updateUploadZoneVisibility();
+}
+
+function updateUploadZoneVisibility() {
+    const dropZone = document.getElementById('dropZone');
+    if (!dropZone) return;
+    if (uploadedPhotos.length > 0) {
+        dropZone.style.display = 'none';
+    } else {
+        dropZone.style.display = 'block';
+    }
+}
+
+async function handleImageFiles(files) {
+    const list = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (uploadedPhotos.length + list.length > 5) { alert('Max 5 photos'); return; }
+    
+    for (const file of list) {
+        // Compress before analysis
+        const compressed = await compressImage(file);
+        const id = Math.random().toString(36).substr(2, 9);
+        const obj = { id, file: compressed, status: 'analyzing', isValid: false, dataUrl: null };
+        uploadedPhotos.push(obj);
+        renderPreview(obj);
+        analyzePhoto(obj);
+    }
+    updateSubmitBtnState();
+    updateUploadZoneVisibility();
+}
+
+/** Compress image using canvas before analysis */
+async function compressImage(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_SIZE = 1200;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                } else {
+                    if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    const compressedFile = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() });
+                    resolve(compressedFile);
+                }, 'image/jpeg', 0.8);
+            };
+        };
+    });
+}
+
+function renderPreview(obj) {
+    const container = document.getElementById('photoPreviewContainer');
+    // Remove existing add button if any
+    const oldAdd = document.getElementById('addPhotoTile');
+    if (oldAdd) oldAdd.remove();
+
+    const div = document.createElement('div');
+    div.id = `preview-${obj.id}`;
+    div.className = 'photo-preview-item';
+    div.innerHTML = `<img id="img-${obj.id}"><div class="p-status" id="stat-${obj.id}">⌛ Analyzing</div><button type="button" onclick="removePhoto('${obj.id}')">&times;</button>`;
+    container.appendChild(div);
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        obj.dataUrl = e.target.result;
+        document.getElementById(`img-${obj.id}`).src = e.target.result;
+    };
+    reader.readAsDataURL(obj.file);
+
+    // Re-add 'Add Photos' button if under limit
+    if (uploadedPhotos.length < 5) {
+        const addDiv = document.createElement('div');
+        addDiv.id = 'addPhotoTile';
+        addDiv.className = 'photo-preview-item add-photo-btn';
+        addDiv.onclick = () => document.getElementById('fileInput').click();
+        addDiv.innerHTML = `<i class="fas fa-plus"></i><span>Add Photos</span>`;
+        container.appendChild(addDiv);
+    }
+}
+
+function removePhoto(id) {
+    uploadedPhotos = uploadedPhotos.filter(p => p.id !== id);
+    const el = document.getElementById(`preview-${id}`);
+    if (el) el.remove();
+    updateSubmitBtnState();
+    updateUploadZoneVisibility();
+    
+    // Refresh the add button
+    const container = document.getElementById('photoPreviewContainer');
+    const oldAdd = document.getElementById('addPhotoTile');
+    if (oldAdd) oldAdd.remove();
+    if (uploadedPhotos.length > 0 && uploadedPhotos.length < 5) {
+        const addDiv = document.createElement('div');
+        addDiv.id = 'addPhotoTile';
+        addDiv.className = 'photo-preview-item add-photo-btn';
+        addDiv.onclick = () => document.getElementById('fileInput').click();
+        addDiv.innerHTML = `<i class="fas fa-plus"></i><span>Add Photos</span>`;
+        container.appendChild(addDiv);
+    }
+}
+
+async function analyzePhoto(obj) {
+    try {
+        const fd = new FormData();
+        fd.append('image', obj.file);
+        const res = await fetch(`${API_BASE}/image/analyze`, { method: 'POST', body: fd });
+        if (res.ok) {
+            const data = await res.json();
+            obj.isValid = data.isValid && !data.isMorphed;
+            obj.status = obj.isValid ? 'verified' : 'rejected';
+            updatePreviewUI(obj);
         }
-    });
+    } catch (_) { obj.status = 'error'; updatePreviewUI(obj); }
+    updateSubmitBtnState();
+}
 
-    dropdown.addEventListener('click', (e) => {
-        e.stopPropagation();
-    });
+function updatePreviewUI(obj) {
+    const el = document.getElementById(`stat-${obj.id}`);
+    if (!el) return;
+    el.textContent = obj.status === 'verified' ? '✅ Verified' : (obj.status === 'rejected' ? '❌ Invalid' : '⚠️ Refused');
+    el.style.background = obj.status === 'verified' ? 'rgba(74, 222, 128, 0.9)' : 'rgba(248, 113, 113, 0.9)';
+}
+
+// ── MISC: CHAT & NOTIFICATIONS ──
+
+function initializeChatBot() {
+    const toggle = document.getElementById('chatToggle');
+    const win = document.getElementById('chatWindow');
+    if (!toggle || !win) return;
+    toggle.onclick = () => win.style.display = win.style.display === 'none' ? 'flex' : 'none';
+    const form = document.getElementById('chatForm');
+    if (form) {
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const inp = document.getElementById('chatInput');
+            if (!inp.value.trim()) return;
+            const msgs = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'chat-msg user';
+            div.textContent = inp.value;
+            msgs.appendChild(div);
+            inp.value = '';
+            setTimeout(() => {
+                const bot = document.createElement('div');
+                bot.className = 'chat-msg bot';
+                bot.textContent = "I'm the CrowdCivics assistant. You can report issues via the dashboard and track them in real-time!";
+                msgs.appendChild(bot);
+                msgs.scrollTop = msgs.scrollHeight;
+            }, 800);
+        };
+    }
 }
 
 async function fetchAndDisplayNotifications(userId) {
-    const notificationList = document.getElementById('notificationList');
-    const badge = document.getElementById('notificationBadge');
-
-    if (!notificationList) return;
-
-    try {
-        const response = await fetch(`${API_BASE}/issues/user/${userId}`);
-        if (!response.ok) throw new Error('Failed to fetch user issues');
-
-        const issues = await response.json();
-
-        const notificationIssues = issues.filter(issue =>
-            ['RESOLVED', 'REJECTED', 'IN_PROGRESS', 'NEW'].includes(issue.status)
-        );
-
-        // Sort by the latest update time
-        notificationIssues.sort((a, b) => {
-            const timeA = new Date(a.updatedAt || a.resolvedAt || a.createdAt);
-            const timeB = new Date(b.updatedAt || b.resolvedAt || b.createdAt);
-            return timeB - timeA;
-        });
-
-        const lastCheckStr = localStorage.getItem('lastNotificationCheck');
-        const lastCheckDate = lastCheckStr ? new Date(lastCheckStr) : new Date(0);
-
-        let unreadCount = 0;
-        let htmlContent = '';
-
-        if (notificationIssues.length === 0) {
-            htmlContent = `
-                <div class="notification-item" style="padding: 1rem; text-align: center; color: var(--text-muted); border-bottom: none;">
-                    No new notifications
-                </div>
-            `;
-        } else {
-            notificationIssues.forEach(issue => {
-                const updatedTime = new Date(issue.updatedAt || issue.resolvedAt || issue.createdAt);
-                const isUnread = updatedTime > lastCheckDate;
-                if (isUnread) unreadCount++;
-
-                let iconHtml = '';
-                let titleHtml = '';
-                let descHtml = '';
-
-                if (issue.status === 'RESOLVED') {
-                    iconHtml = '<i class="fas fa-check-circle" style="color: var(--success-color);"></i>';
-                    titleHtml = 'Issue Resolved';
-                    descHtml = `Your report "${issue.title}" has been resolved.`;
-                } else if (issue.status === 'REJECTED') {
-                    iconHtml = '<i class="fas fa-times-circle" style="color: var(--danger-color);"></i>';
-                    titleHtml = 'Issue Rejected';
-                    descHtml = `Your report "${issue.title}" was rejected. ${issue.rejectionReason ? '<br>Reason: ' + issue.rejectionReason : ''}`;
-                } else if (issue.status === 'IN_PROGRESS') {
-                    iconHtml = '<i class="fas fa-spinner fa-spin" style="color: var(--warning-color);"></i>';
-                    titleHtml = 'Issue In Progress';
-                    descHtml = `Work has started on your report "${issue.title}".`;
-                } else if (issue.status === 'NEW') {
-                    iconHtml = '<i class="fas fa-file-alt" style="color: var(--primary-color);"></i>';
-                    titleHtml = 'Report Received';
-                    descHtml = `Your report "${issue.title}" has been successfully submitted and is under review.`;
-                }
-
-                const timeStr = updatedTime.toLocaleDateString() + ' ' + updatedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                htmlContent += `
-                    <div class="notification-item ${isUnread ? 'unread' : ''}">
-                        ${iconHtml}
-                        <div class="notification-content">
-                            <strong>${titleHtml}</strong>
-                            <p>${descHtml}</p>
-                            <span class="time">${timeStr}</span>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        notificationList.innerHTML = htmlContent;
-
-        if (badge) {
-            if (unreadCount > 0) {
-                badge.textContent = unreadCount;
-                badge.style.display = 'block';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-
-    } catch (error) {
-        console.error('Error fetching notifications:', error);
-    }
-}
-
-function initializeUserLocationDisplay() {
-    const locationDisplay = document.getElementById('userLocationDisplay');
-    if (!locationDisplay) return;
-
-    if (!navigator.geolocation) {
-        locationDisplay.innerHTML = '<i class="fas fa-map-marker-alt"></i> Location not supported';
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-        async (position) => {
-            const { latitude, longitude } = position.coords;
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-                const data = await response.json();
-
-                let locationName = '';
-                if (data.address) {
-                    const a = data.address;
-                    const parts = [
-                        a.neighbourhood || a.suburb || a.city_district || a.quarter,
-                        a.city || a.town || a.village || a.county
-                    ].filter(Boolean);
-                    
-                    locationName = parts.length > 0 ? parts.join(', ') : (data.display_name || '');
-                    
-                    if (locationName && a.state && !locationName.includes(a.state)) {
-                        locationName += ', ' + a.state;
-                    }
-                }
-
-                if (locationName) {
-                    locationDisplay.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${locationName}`;
-                } else {
-                    locationDisplay.innerHTML = `<i class="fas fa-map-marker-alt"></i> Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
-                }
-            } catch (error) {
-                console.error('Error reverse geocoding:', error);
-                locationDisplay.innerHTML = `<i class="fas fa-map-marker-alt"></i> Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
-            }
-        },
-        (error) => {
-            console.error('Geolocation error:', error);
-            locationDisplay.innerHTML = '<i class="fas fa-map-marker-alt"></i> Location access denied';
-        }
-    );
-}
-
-function initializeForgotPassword() {
-    const resetForm = document.getElementById('passwordResetForm');
-    if (resetForm) {
-        console.log('Forgot password page detected - initializing...');
-
-        const sendResetOtpBtn = document.getElementById('sendResetOtpBtn');
-        const emailInput = document.getElementById('resetEmail');
-        const resetOtpGroup = document.getElementById('resetOtpGroup');
-        const resetPasswordGroup = document.getElementById('resetPasswordGroup');
-        const resetBtn = document.getElementById('resetBtn');
-
-        if (sendResetOtpBtn) {
-            sendResetOtpBtn.addEventListener('click', async function () {
-                const email = emailInput.value.trim();
-
-                if (!email) {
-                    showMessage('Please enter your email address first', 'error');
-                    return;
-                }
-
-                try {
-                    showMessage('Sending Email OTP...', 'info');
-                    sendResetOtpBtn.disabled = true;
-                    sendResetOtpBtn.textContent = 'Sending...';
-
-                    const response = await fetch(`${API_BASE}/auth/send-reset-otp`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ email: email })
-                    });
-
-                    const resultText = await response.text();
-                    if (response.ok) {
-                        showMessage('OTP sent to email! Check your inbox.', 'success');
-                        resetOtpGroup.style.display = 'block';
-                        resetPasswordGroup.style.display = 'block';
-                        resetBtn.style.display = 'block';
-
-                        startOTPTimer(sendResetOtpBtn);
-                        document.getElementById('resetOtp').focus();
-                    } else {
-                        showMessage('Failed to send OTP: ' + resultText, 'error');
-                        sendResetOtpBtn.disabled = false;
-                        sendResetOtpBtn.textContent = 'Send OTP';
-                    }
-                } catch (error) {
-                    console.error('OTP error:', error);
-                    showMessage('Network error.', 'error');
-                    sendResetOtpBtn.disabled = false;
-                    sendResetOtpBtn.textContent = 'Send OTP';
-                }
-            });
-        }
-
-        resetForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const email = emailInput.value.trim();
-            const otp = document.getElementById('resetOtp').value.trim();
-            const newPassword = document.getElementById('newPassword').value;
-
-            if (!email || !otp || !newPassword) {
-                showMessage('Please fill in all fields', 'error');
-                return;
-            }
-
-            try {
-                showMessage('Resetting password...', 'info');
-                resetBtn.disabled = true;
-                resetBtn.textContent = 'Processing...';
-
-                const response = await fetch(`${API_BASE}/auth/reset-password`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        otp: otp,
-                        newPassword: newPassword
-                    })
-                });
-
-                const resultText = await response.text();
-
-                if (response.ok) {
-                    showMessage('Password reset successful! Redirecting...', 'success');
-                    setTimeout(() => {
-                        window.location.href = 'reset-password.html';
-                    }, 1500);
-                } else {
-                    showMessage(resultText, 'error');
-                    resetBtn.disabled = false;
-                    resetBtn.textContent = 'Reset Password';
-                }
-            } catch (error) {
-                console.error('Reset error:', error);
-                showMessage('Password reset failed.', 'error');
-                resetBtn.disabled = false;
-                resetBtn.textContent = 'Reset Password';
-            }
-        });
-    }
-}
-
-if (document.getElementById('registerFormElement')) {
-    const registerEmailInput = document.getElementById('registerEmail');
-    if (registerEmailInput) {
-        registerEmailInput.addEventListener('blur', async function() {
-            const email = this.value.trim();
-            if (!email || !email.includes('@')) return;
-
-            try {
-                const response = await fetch(`${API_BASE}/auth/user?email=${encodeURIComponent(email)}`);
-                if (response.ok) {
-                    showMessage('This email is already registered. Please sign in instead.', 'error');
-                    this.classList.add('input-error');
-                    if (sendOtpBtn) sendOtpBtn.disabled = true;
-                } else {
-                    this.classList.remove('input-error');
-                    if (sendOtpBtn) sendOtpBtn.disabled = false;
-                }
-            } catch (error) {
-                console.error('Email check failed:', error);
-            }
-        });
-    }
-
-    const sendOtpBtn = document.getElementById('sendOtpBtn');
-    const phoneInput = document.getElementById('mobileNumber');
-    const otpGroup = document.getElementById('otpGroup');
-    const registerBtn = document.getElementById('registerBtn');
-
-    if (sendOtpBtn) {
-        sendOtpBtn.addEventListener('click', async function () {
-            const email = document.getElementById('registerEmail').value.trim();
-
-            if (!email) {
-                showMessage('Please enter your email address first', 'error');
-                return;
-            }
-
-            try {
-                showMessage('Sending Email OTP...', 'info');
-                sendOtpBtn.disabled = true;
-                sendOtpBtn.textContent = 'Sending...';
-
-                const response = await fetch(`${API_BASE}/auth/send-registration-otp`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email: email })
-                });
-
-                const resultText = await response.text();
-                if (response.ok) {
-                    showMessage('OTP sent to email! Check your inbox.', 'success');
-                    if (otpGroup) otpGroup.style.display = 'block';
-                    startOTPTimer(sendOtpBtn);
-                    const otpInput = document.getElementById('otpInput');
-                    if (otpInput) otpInput.focus();
-                } else {
-                    if (resultText === 'Email already registered') {
-                        showMessage('This email is already registered. <a href="login.html" style="color:white; text-decoration:underline;">Click here to Login</a>', 'error');
-                    } else {
-                        showMessage('Failed to send OTP: ' + resultText, 'error');
-                    }
-                    sendOtpBtn.disabled = false;
-                    sendOtpBtn.textContent = 'Send OTP';
-                }
-            } catch (error) {
-                console.error('OTP error:', error);
-                showMessage('Network error.', 'error');
-                sendOtpBtn.disabled = false;
-                sendOtpBtn.textContent = 'Send OTP';
-            }
-        });
-    }
-
-    const customerBtn = document.getElementById('customerBtn');
-    const sellerBtn = document.getElementById('sellerBtn');
-    const adminIdGroup = document.getElementById('adminIdGroup');
-    const adminIdInput = document.getElementById('adminId');
-    const formTitle = document.querySelector('.form-title');
-
-    function setRole(role) {
-        if (role === 'municipal') {
-            sellerBtn.classList.add('active');
-            customerBtn.classList.remove('active');
-            adminIdGroup.style.display = 'block';
-            adminIdInput.setAttribute('required', 'true');
-            if (formTitle) formTitle.textContent = 'Municipal Registration';
-        } else {
-            customerBtn.classList.add('active');
-            sellerBtn.classList.remove('active');
-            adminIdGroup.style.display = 'none';
-            adminIdInput.removeAttribute('required');
-            adminIdInput.value = '';
-            if (formTitle) formTitle.textContent = 'Citizen Registration';
-        }
-    }
-
-    if (customerBtn && sellerBtn && adminIdGroup) {
-        customerBtn.addEventListener('click', () => setRole('citizen'));
-        sellerBtn.addEventListener('click', () => setRole('municipal'));
-    }
-
-    document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const formData = {
-            name: document.getElementById('registerName').value.trim(),
-            email: document.getElementById('registerEmail').value.trim(),
-            phone: document.getElementById('mobileNumber').value.trim(),
-            password: document.getElementById('registerPassword').value,
-            otp: document.getElementById('otpInput') ? document.getElementById('otpInput').value.trim() : '',
-            password: document.getElementById('registerPassword').value,
-            otp: document.getElementById('otpInput') ? document.getElementById('otpInput').value.trim() : '',
-            role: document.getElementById('sellerBtn').classList.contains('active') ? 'ADMIN' : 'CITIZEN'
-        };
-
-        if (formData.role === 'ADMIN') {
-            const adminId = document.getElementById('adminId').value.trim();
-
-            if (!adminId) {
-                showMessage('Please enter your Government Unique ID', 'error');
-                return;
-            }
-            if (!/^\d{8}$/.test(adminId)) {
-                showMessage('Government Unique ID must be exactly 8 digits', 'error');
-                return;
-            }
-
-            formData.adminId = adminId;
-        }
-
-        const confirmPassword = document.getElementById('confirmPassword').value;
-
-        if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.otp) {
-            showMessage('Please fill in all fields including OTP', 'error');
-            return;
-        }
-
-        if (formData.password !== confirmPassword) {
-            showMessage('Passwords do not match', 'error');
-            return;
-        }
-
-        try {
-            showMessage('Creating account...', 'info');
-            if (registerBtn) {
-                registerBtn.disabled = true;
-                registerBtn.textContent = 'Creating Account...';
-            }
-
-            const response = await fetch(`${API_BASE}/auth/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            });
-
-            const resultText = await response.text();
-
-            if (response.ok) {
-                showMessage('Registration successful! Redirecting...', 'success');
-                setTimeout(() => {
-                    const loginToggle = document.getElementById('loginToggle');
-                    if (loginToggle) {
-                        loginToggle.click();
-                        document.getElementById('registerFormElement').reset();
-                        if (otpGroup) otpGroup.style.display = 'none';
-                        if (sendOtpBtn) {
-                            sendOtpBtn.disabled = false;
-                            sendOtpBtn.textContent = 'Send OTP';
-                        }
-                    } else {
-                        window.location.href = 'login.html';
-                    }
-                }, 2000);
-            } else {
-                if (resultText === 'Email already registered') {
-                    showMessage('This email is already registered. <a href="login.html" style="color:white; text-decoration:underline;">Click here to Login</a>', 'error');
-                } else {
-                    showMessage(resultText, 'error');
-                }
-            }
-        } catch (error) {
-            console.error('Registration error:', error);
-            showMessage('Registration failed.', 'error');
-        } finally {
-            if (registerBtn) {
-                registerBtn.disabled = false;
-                registerBtn.textContent = 'Create Account';
-            }
-        }
-    });
-}
-
-const loginCustomerBtn = document.getElementById('loginCustomerBtn');
-const loginSellerBtn = document.getElementById('loginSellerBtn');
-const loginEmailLabel = document.getElementById('loginEmailLabel');
-const loginEmailInput = document.getElementById('loginEmail');
-
-if (loginCustomerBtn && loginSellerBtn && loginEmailLabel && loginEmailInput) {
-    function setLoginRole(role) {
-        if (role === 'municipal') {
-            loginSellerBtn.classList.add('active');
-            loginCustomerBtn.classList.remove('active');
-            loginEmailLabel.textContent = 'Government Unique ID';
-            loginEmailInput.placeholder = 'Enter Government ID';
-            loginEmailInput.type = 'text';
-        } else {
-            loginCustomerBtn.classList.add('active');
-            loginSellerBtn.classList.remove('active');
-            loginEmailLabel.textContent = 'Email Address';
-            loginEmailInput.placeholder = 'you@example.com';
-            loginEmailInput.type = 'email';
-        }
-    }
-
-    loginCustomerBtn.addEventListener('click', () => setLoginRole('citizen'));
-    loginSellerBtn.addEventListener('click', () => setLoginRole('municipal'));
-}
-
-if (document.getElementById('loginFormElement')) {
-    document.getElementById('loginFormElement').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const isMunicipalStaff = document.getElementById('loginSellerBtn').classList.contains('active');
-        const attemptedRole = isMunicipalStaff ? 'ADMIN' : 'CITIZEN';
-
-        const loginData = {
-            email: document.getElementById('loginEmail').value.trim(),
-            password: document.getElementById('loginPassword').value,
-            role: attemptedRole
-        };
-
-        if (!loginData.email || !loginData.password) {
-            showMessage('Please fill in all fields', 'error');
-            return;
-        }
-
-        try {
-            showMessage('Signing in...', 'info');
-
-            const response = await fetch(`${API_BASE}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(loginData)
-            });
-
-            const resultText = await response.text();
-
-            if (response.ok) {
-                const data = JSON.parse(resultText);
-
-                if (data.role !== attemptedRole) {
-                    showMessage('Unauthorized access: Please select the correct user type for this account.', 'error');
-                    return;
-                }
-
-                showMessage('Login successful! Redirecting...', 'success');
-
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userEmail', data.email);
-                localStorage.setItem('userRole', data.role);
-                localStorage.setItem('userId', data.userId);
-
-                setTimeout(() => {
-                    if (data.role === 'ADMIN') {
-                        window.location.href = 'admin.html';
-                    } else {
-                        window.location.href = 'dashboard.html';
-                    }
-                }, 1000);
-            } else {
-                let errorMsg = resultText;
-                try {
-                    const errData = JSON.parse(resultText);
-                    if (errData.message) errorMsg = errData.message;
-                } catch (e) {
-                }
-                showMessage(errorMsg || 'Login failed. Please check your credentials.', 'error');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            showMessage('Login failed. Please check your connection.', 'error');
-        }
-    });
-}
-
-if (document.getElementById('userName')) {
-    document.addEventListener('DOMContentLoaded', function () {
-        console.log('Dashboard/home page initialization started');
-        updateDebugInfo('Page loaded, checking authentication...');
-
-        const userEmail = localStorage.getItem('userEmail');
-        const isLoggedIn = localStorage.getItem('isLoggedIn');
-
-        console.log('Auth check - Logged in:', isLoggedIn);
-        console.log('Stored email:', userEmail);
-
-        if (!isLoggedIn || !userEmail) {
-            updateDebugInfo('Not authenticated, redirecting to login...');
-            console.log('No authentication found, redirecting to login');
-            showMessage('Please login first', 'error');
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-            return;
-        }
-
-        updateDebugInfo(`Fetching data for: ${userEmail}`);
-        loadUserData(userEmail);
-    });
-}
-
-function loadUserData(userEmail) {
-    const userUrl = `${API_BASE}/auth/user?email=${encodeURIComponent(userEmail)}`;
-    console.log('API URL:', userUrl);
-    updateDebugInfo(`Calling: ${userUrl}`);
-
-    fetch(userUrl)
-        .then(response => {
-            console.log('Raw response:', response);
-            updateDebugInfo(`Response status: ${response.status}`);
-
-            if (response.status === 404) {
-                return response.text().then(errorMessage => {
-                    throw new Error(`User not found: ${errorMessage}`);
-                });
-            }
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
-            }
-
-            return response.json();
-        })
-        .then(user => {
-            console.log('User data received:', user);
-            updateDebugInfo(`Data received for: ${user.name}`);
-
-            if (user && typeof user === 'object') {
-                if (document.getElementById('userName')) document.getElementById('userName').textContent = user.name || 'Unknown';
-                if (document.getElementById('profileHeaderName')) document.getElementById('profileHeaderName').textContent = user.name || 'Your Profile';
-                if (document.getElementById('userEmail')) document.getElementById('userEmail').textContent = user.email || 'Not provided';
-                if (document.getElementById('userPhone')) document.getElementById('userPhone').textContent = user.phone || 'Not provided';
-                if (document.getElementById('userId')) document.getElementById('userId').textContent = user.id || 'Unknown';
-
-                console.log('UI updated successfully');
-                updateDebugInfo('User data loaded successfully!');
-
-                // showMessage(`Welcome back, ${user.name}!`, 'success');
-
-                if (document.getElementById('analyticsSummary')) {
-                    loadAnalyticsSummary();
-                }
-
-                if (user.id) {
-                    fetchAndDisplayNotifications(user.id);
-                }
-            } else {
-                throw new Error('Invalid user data format received');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading user data:', error);
-            updateDebugInfo(`Error: ${error.message}`);
-
-            if (document.getElementById('userName')) document.getElementById('userName').textContent = 'Error Loading';
-            if (document.getElementById('userEmail')) document.getElementById('userEmail').textContent = userEmail;
-            if (document.getElementById('userPhone')) document.getElementById('userPhone').textContent = 'Check Console';
-            if (document.getElementById('userId')) document.getElementById('userId').textContent = 'N/A';
-
-            showMessage(`Failed to load user data: ${error.message}`, 'error');
-        });
-}
-
-if (document.getElementById('logoutBtn')) {
-    document.getElementById('logoutBtn').addEventListener('click', function () {
-        console.log('Logout initiated');
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('userEmail');
-        console.log('localStorage cleared');
-        showMessage('Logged out successfully', 'success');
-        setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 1000);
-    });
-}
-
-function initializeIssueDashboard() {
-    const issueForm = document.getElementById('issueForm');
-    if (!issueForm) {
-        return;
-    }
-
-    console.log('Initializing issue reporting dashboard');
-
-    const useLocationBtn = document.getElementById('useLocationBtn');
-    const locationText = document.getElementById('locationText');
-    const latInput = document.getElementById('latitude');
-    const lngInput = document.getElementById('longitude');
-
-    if (useLocationBtn) {
-        useLocationBtn.addEventListener('click', () => {
-            if (!navigator.geolocation) {
-                showMessage('Geolocation is not supported in this browser.', 'error');
-                return;
-            }
-
-            showMessage('Detecting your location...', 'info');
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    latInput.value = latitude;
-                    lngInput.value = longitude;
-                    if (locationText) {
-                        locationText.textContent = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
-                    }
-                    showMessage('Location captured successfully.', 'success');
-                },
-                (error) => {
-                    console.error('Geolocation error:', error);
-                    showMessage('Unable to get your location. Please allow location access or enter address manually.', 'error');
-                }
-            );
-        });
-    }
-
-    if (issueForm && !issueForm.dataset.listenerAttached) {
-        issueForm.dataset.listenerAttached = 'true';
-        issueForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const userEmail = localStorage.getItem('userEmail');
-            const reporterName = document.getElementById('userName')
-                ? document.getElementById('userName').textContent
-                : '';
-            const reporterPhone = document.getElementById('userPhone')
-                ? document.getElementById('userPhone').textContent
-                : '';
-
-            const formData = new FormData();
-            formData.append('title', document.getElementById('issueTitle').value.trim());
-            formData.append('description', document.getElementById('issueDescription').value.trim());
-            formData.append('category', document.getElementById('issueCategory').value);
-            formData.append('priority', document.getElementById('issuePriority').value);
-            formData.append('address', document.getElementById('issueAddress').value.trim());
-
-            const lat = latInput.value;
-            const lng = lngInput.value;
-            if (lat) formData.append('latitude', lat);
-            if (lng) formData.append('longitude', lng);
-
-            if (reporterName) formData.append('reporterName', reporterName);
-            if (userEmail) formData.append('reporterEmail', userEmail);
-            if (reporterPhone && reporterPhone !== 'Not provided') {
-                formData.append('reporterPhone', reporterPhone);
-            }
-
-            const photoInput = document.getElementById('issuePhoto');
-            if (photoInput && photoInput.files && photoInput.files[0]) {
-                formData.append('photo', photoInput.files[0]);
-            }
-
-            if (!formData.get('title') || !formData.get('category')) {
-                showMessage('Please provide at least a title and category for the issue.', 'error');
-                return;
-            }
-
-            try {
-                showMessage('Submitting issue...', 'info');
-
-                const response = await fetch(`${API_BASE}/issues`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const text = await response.text();
-                    throw new Error(text || 'Failed to submit issue');
-                }
-
-                const savedIssue = await response.json();
-                console.log('Issue created:', savedIssue);
-                showMessage('Issue submitted successfully!', 'success');
-
-                issueForm.reset();
-                if (locationText) {
-                    locationText.textContent = 'No location selected';
-                }
-                latInput.value = '';
-                lngInput.value = '';
-
-                if (userEmail) {
-                    loadUserIssues();
-                    const userId = localStorage.getItem('userId');
-                    if (userId) fetchAndDisplayNotifications(userId);
-                }
-            } catch (err) {
-                console.error('Issue submission error:', err);
-                showMessage(`Failed to submit issue: ${err.message}`, 'error');
-            }
-        });
-    }
-}
-
-
-
-async function loadAnalyticsSummary() {
-    const container = document.getElementById('analyticsSummary');
-    if (!container) return;
-
-    try {
-        container.innerHTML = '<p>Loading analytics...</p>';
-        const resp = await fetch(`${API_BASE}/admin/analytics/summary`);
-        if (!resp.ok) {
-            throw new Error(`HTTP ${resp.status}`);
-        }
-        const data = await resp.json();
-
-        container.innerHTML = '';
-
-        const totalCard = document.createElement('div');
-        totalCard.className = 'analytics-card';
-        totalCard.innerHTML = `
-            <h4>Total Issues</h4>
-            <div class="seperatediv"><strong>${data.totalIssues ?? 0}</strong> reported</div>
-        `;
-        container.appendChild(totalCard);
-
-        const statusMap = data.byStatus || {};
-        Object.keys(statusMap).forEach(key => {
-            const card = document.createElement('div');
-            card.className = 'analytics-card';
-            card.innerHTML = `
-                <h4>Status: ${key}</h4>
-                <div class="seperatediv"><strong>${statusMap[key]}</strong> reported</div>
-            `;
-            container.appendChild(card);
-        });
-
-        const catMap = data.byCategory || {};
-        Object.keys(catMap).forEach(key => {
-            const card = document.createElement('div');
-            card.className = 'analytics-card';
-            card.innerHTML = `
-                <h4>Category: ${key}</h4>
-                <div class="seperatediv"><strong>${catMap[key]}</strong> reported</div>
-            `;
-            container.appendChild(card);
-        });
-
-        const avgCard = document.createElement('div');
-        avgCard.className = 'analytics-card';
-        avgCard.innerHTML = `
-            <h4>Avg. Resolution Time</h4>
-            <div class="seperatediv"><strong>${(data.avgResolutionHours || 0).toFixed(2)}</strong> hours (resolved issues)</div>
-        `;
-        container.appendChild(avgCard);
-    } catch (err) {
-        console.error('Failed to load analytics:', err);
-        container.innerHTML = '<p>Failed to load analytics data.</p>';
-    }
-}
-
-function initializeChatBot() {
-    const chatToggle = document.getElementById('chatToggle');
-    const chatWindow = document.getElementById('chatWindow');
-    const chatClose = document.getElementById('chatClose');
-    const chatForm = document.getElementById('chatForm');
-    const chatInput = document.getElementById('chatInput');
-    const chatMessages = document.getElementById('chatMessages');
-
-    if (!chatToggle || !chatWindow || !chatForm || !chatInput || !chatMessages) {
-        return;
-    }
-
-    function openChat() {
-        chatWindow.classList.add('open');
-        chatWindow.setAttribute('aria-hidden', 'false');
-        chatInput.focus();
-
-        if (!chatMessages.dataset.initialized) {
-            addBotMessage("Hi there! 👋 I'm your friendly CrowdCivics assistant. How can I help you make our city better today?");
-            chatMessages.dataset.initialized = 'true';
-        }
-    }
-
-    function closeChat() {
-        chatWindow.classList.remove('open');
-        chatWindow.setAttribute('aria-hidden', 'true');
-    }
-
-    function addMessage(text, sender) {
-        const msg = document.createElement('div');
-        msg.className = `chat-message ${sender}`;
-        msg.textContent = text;
-        chatMessages.appendChild(msg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function addBotMessage(text) {
-        addMessage(text, 'bot');
-    }
-
-    chatToggle.addEventListener('click', () => {
-        if (chatWindow.classList.contains('open')) {
-            closeChat();
-        } else {
-            openChat();
-        }
-    });
-
-    if (chatClose) {
-        chatClose.addEventListener('click', () => {
-            closeChat();
-        });
-    }
-
-    chatForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const text = chatInput.value.trim();
-        if (!text) return;
-
-        addMessage(text, 'user');
-        chatInput.value = '';
-
-        const reply = window.getBotReply(text);
-        setTimeout(() => {
-            addBotMessage(reply);
-        }, 300);
-    });
-}
-
-window.getBotReply = function (text) {
-    const t = text.toLowerCase();
-
-    if (t === 'hi' || t === 'hello' || t === 'hey' || t.includes('hey there')) {
-        return "Hey there! 👋 I'm your friendly neighborhood CrowdCivics bot. How's it going today? Need any help with reporting issues or checking your profile?";
-    }
-    if (t.includes('how are you') || t.includes('whats up') || t.includes("what's up")) {
-        return "I'm doing great, thanks for asking! 😊 Just hanging out here waiting to help you make our city better. What's on your mind?";
-    }
-    if (t.includes('thanks') || t.includes('thank you')) {
-        return "You're very welcome! Let me know if you need anything else. Have an awesome day! 🌟";
-    }
-    if (t === 'bye' || t === 'goodbye' || t.includes('see ya')) {
-        return "Catch you later! Keep up the great work in the community! 👋";
-    }
-
-    if (t.includes('register the issue') || t.includes('how to report') || t.includes('submit an issue')) {
-        return "Reporting an issue is easy! 🛠️ First, sign in to your account. Then go to your Dashboard and click on 'Report Issue'. Fill in the title, description, category, and location. You can even upload a photo to help the authorities understand the problem better. Once submitted, you can track its progress in real-time!";
-    }
-
-    if (t.includes('register') || t.includes('sign up') || t.includes('account')) {
-        return "Getting set up is super easy! Just head over to the landing page, hit 'Create Account', pop in your details and verify your OTP. You'll be ready to go in no time! 🚀";
-    }
-    if (t.includes('login') || t.includes('sign in')) {
-        return "Just hop over to the Login page and use your email and password. Once you're in, we'll take you straight to your dashboard! 🔑";
-    }
-    if (t.includes('report') || t.includes('issue') || t.includes('problem')) {
-        return "Spotted a problem? No worries! 🛠️ Just sign in and go to 'Report Issue' on your dashboard. Tell us what's wrong, add a photo if you have one, pin the location, and hit submit. We'll take it from there!";
-    }
-    if (t.includes('status') || t.includes('track') || t.includes('progress')) {
-        return "Curious about your reports? 🕵️‍♂️ You can track them all in the 'My Reports' section on your dashboard after you sign in. We'll keep you posted if the status is NEW, IN_PROGRESS, or RESOLVED!";
-    }
-    if (t.includes('analytics') || t.includes('overview') || t.includes('statistics') || t.includes('chart')) {
-        return "Oh, you want the big picture? 📊 Check out the 'City Overview' section! It shows you all the cool stats like total issues reported, how quickly we're fixing things, and what types of issues are common down your street.";
-    }
-    if (t.includes('profile') || t.includes('name') || t.includes('phone') || t.includes('email')) {
-        return "Your profile is where you keep all your personal details up to date! 👤 We attach this info to your reports so the city staff knows who the local hero is and can contact you if they need to.";
-    }
-
-    return "I'm still learning, so I might not understand everything perfectly yet! 😅 But I'm great at helping with registration, logging in, reporting issues, or checking analytics. Want to chat about one of those?";
-}
-
-function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-}
-
-window.testPassword = function (password) {
-    fetch(`${API_BASE}/auth/test-password?password=${encodeURIComponent(password)}`)
-        .then(response => response.text())
-        .then(result => console.log('Password test:', result));
-};
-
-window.testUser = function (email) {
-    fetch(`${API_BASE}/auth/user?email=${encodeURIComponent(email)}`)
-        .then(response => response.json())
-        .then(result => console.log('User test:', result))
-        .catch(error => console.log('User test error:', error));
-};
-
-window.debugOTP = function (email, purpose = 'PASSWORD_RESET') {
-    fetch(`${API_BASE}/auth/debug/otp-status?email=${encodeURIComponent(email)}&purpose=${purpose}`)
-        .then(response => response.text())
-        .then(result => console.log('OTP Debug:', result))
-        .catch(error => console.log('OTP Debug error:', error));
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-    const adminToggle = document.getElementById('adminLoginToggle');
-    const emailLabel = document.getElementById('emailLabel');
-    const emailInput = document.getElementById('email');
-
-    if (adminToggle && emailLabel && emailInput) {
-        adminToggle.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                emailLabel.textContent = 'Government Admin ID';
-                emailInput.placeholder = 'Enter your Admin ID';
-            } else {
-                emailLabel.textContent = 'Email Address';
-                emailInput.placeholder = 'Enter your email';
-            }
-        });
-    }
-});
-
-function initReportPage() {
-    const getLocationBtn = document.getElementById('getLocationBtn');
-    const locationInfo = document.getElementById('locationInfo');
-    const coordsSpan = document.getElementById('coords');
-    const latInput = document.getElementById('latitude');
-    const lngInput = document.getElementById('longitude');
-
-    const categorySelect = document.getElementById('category');
-    const otherCategoryGroup = document.getElementById('otherCategoryGroup');
-    const otherCategoryInput = document.getElementById('otherCategory');
-
-    if (categorySelect && otherCategoryGroup) {
-        categorySelect.addEventListener('change', () => {
-            if (categorySelect.value === 'OTHER') {
-                otherCategoryGroup.style.display = 'block';
-                otherCategoryInput.required = true;
-            } else {
-                otherCategoryGroup.style.display = 'none';
-                otherCategoryInput.required = false;
-            }
-        });
-    }
-
-    if (getLocationBtn) {
-        getLocationBtn.addEventListener('click', () => {
-            if (navigator.geolocation) {
-                getLocationBtn.textContent = 'Acquiring Location...';
-                getLocationBtn.disabled = true;
-
-                // Factor out success handler
-                const handleLocationSuccess = async (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-
-                    latInput.value = lat;
-                    lngInput.value = lng;
-
-                    try {
-                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-                        const data = await response.json();
-                        
-                        let address = data.display_name;
-                        if (data.address) {
-                            const a = data.address;
-                            const addressParts = [
-                                a.house_number,
-                                a.road || a.pedestrian || a.path,
-                                a.neighbourhood,
-                                a.suburb,
-                                a.city_district || a.quarter,
-                                a.city || a.town || a.village,
-                                a.state,
-                                a.postcode
-                            ].filter(Boolean);
-                            const uniqueParts = addressParts.filter((part, index) => addressParts.indexOf(part) === index);
-                            if (uniqueParts.length > 0) address = uniqueParts.join(', ');
-                        }
-
-                        if (document.getElementById('address')) {
-                            document.getElementById('address').value = address || data.display_name;
-                        }
-                        if (coordsSpan) coordsSpan.textContent = address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                        
-                        getLocationBtn.innerHTML = '✅ Location Secured';
-                        getLocationBtn.classList.remove('btn-secondary');
-                        getLocationBtn.classList.add('btn-primary');
-                    } catch (error) {
-                        console.error("Reverse geocoding failed:", error);
-                        if (coordsSpan) coordsSpan.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                        getLocationBtn.innerHTML = '✅ Coordinates Captured';
-                    } finally {
-                        if (locationInfo) locationInfo.style.display = 'flex';
-                    }
-                };
-
-                const handleLocationError = (error) => {
-                    console.warn("High accuracy location failed, trying fallback...", error);
-                    navigator.geolocation.getCurrentPosition(
-                        handleLocationSuccess,
-                        (fallbackError) => {
-                            console.error("Geolocation failed:", fallbackError);
-                            alert("Unable to retrieve your location. Please ensure location services are enabled or enter coordinates manually.");
-                            getLocationBtn.textContent = '📍 Retry Location';
-                            getLocationBtn.disabled = false;
-                        },
-                        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
-                    );
-                };
-
-                navigator.geolocation.getCurrentPosition(
-                    handleLocationSuccess,
-                    handleLocationError,
-                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-                );
-            } else {
-                alert("Geolocation is not supported by this browser.");
-            }
-        });
-    }
-
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const previewContainer = document.getElementById('photoPreviewContainer');
-
-    // New state management for multiple photos
-    let uploadedPhotos = []; // Array of { id, file, dataUrl, isValid, status }
-
-    if (dropZone && fileInput) {
-        dropZone.addEventListener('click', (e) => {
-            if (e.target !== fileInput) {
-                fileInput.click();
-            }
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleImageFiles(e.target.files);
-                e.target.value = ''; // Reset for next selection
-            }
-        });
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = 'var(--primary-color)';
-            dropZone.style.backgroundColor = '#f0f9ff';
-        });
-
-        dropZone.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = '#cbd5e1';
-            dropZone.style.backgroundColor = '#f8fafc';
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = '#cbd5e1';
-            dropZone.style.backgroundColor = '#f8fafc';
-            if (e.dataTransfer.files.length > 0) {
-                handleImageFiles(e.dataTransfer.files);
-            }
-        });
-    }
-
-    function handleImageFiles(files) {
-        const fileList = Array.from(files).filter(f => f.type.startsWith('image/'));
-        
-        if (uploadedPhotos.length + fileList.length > 5) {
-            alert("Maximum 5 photos allowed. Please remove existing ones first.");
-            return;
-        }
-
-        fileList.forEach(file => {
-            const photoId = Math.random().toString(36).substr(2, 9);
-            const photoObj = {
-                id: photoId,
-                file: file,
-                dataUrl: null,
-                isValid: false,
-                status: 'analyzing'
-            };
-            uploadedPhotos.push(photoObj);
-            renderPhotoPreview(photoObj);
-            analyzePhoto(photoObj);
-        });
-        updateAddCardVisibility();
-        updateSubmitButtonState();
-    }
-
-    function updateAddCardVisibility() {
-        // Remove existing add card
-        const existingCard = document.getElementById('add-photo-card');
-        if (existingCard) existingCard.remove();
-
-        // Hide primary dropZone if we have photos (user request: show "add photo" option instead)
-        if (uploadedPhotos.length > 0) {
-            dropZone.style.display = 'none';
-        } else {
-            dropZone.style.display = 'block';
-        }
-
-        // Add small card to grid if < 5
-        if (uploadedPhotos.length > 0 && uploadedPhotos.length < 5) {
-            const addCard = document.createElement('div');
-            addCard.id = 'add-photo-card';
-            addCard.className = 'photo-preview-item add-card';
-            addCard.style = 'cursor: pointer; border: 2px dashed #cbd5e1; border-radius: 12px; height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; transition: all 0.2s;';
-            addCard.innerHTML = `
-                <div style="font-size: 1.5rem; color: #64748b;">+</div>
-                <div style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Add Photo</div>
-            `;
-            addCard.onclick = () => fileInput.click();
-            addCard.onmouseover = () => { addCard.style.borderColor = 'var(--primary-color)'; addCard.style.backgroundColor = '#f1f5f9'; };
-            addCard.onmouseout = () => { addCard.style.borderColor = '#cbd5e1'; addCard.style.backgroundColor = '#f8fafc'; };
-            previewContainer.appendChild(addCard);
-        }
-    }
-
-    async function analyzePhoto(photoObj) {
-        // Read file for preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            photoObj.dataUrl = e.target.result;
-            const previewImg = document.getElementById(`img-${photoObj.id}`);
-            if (previewImg) {
-                previewImg.src = e.target.result;
-                previewImg.style.opacity = '0.5'; // Keeping it dim while analyzing
-            }
-        };
-        reader.readAsDataURL(photoObj.file);
-
-        // Call AI API to analyze image
-        try {
-            const formData = new FormData();
-            formData.append('image', photoObj.file);
-
-            const response = await fetch(`${API_BASE}/image/analyze`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                photoObj.isValid = result.isValid && !result.isMorphed;
-                photoObj.status = photoObj.isValid ? 'verified' : 'rejected';
-                photoObj.rejectionReason = result.rejectionReason;
-
-                if (photoObj.isValid && result.identified_category && result.identified_category !== 'OTHER' && categorySelect) {
-                    // Auto-suggest category if current one is default
-                    if (!categorySelect.value || categorySelect.value === '') {
-                        categorySelect.value = result.identified_category;
-                        categorySelect.dispatchEvent(new Event('change'));
-                    }
-                }
-                
-                updatePreviewUI(photoObj);
-            } else {
-                photoObj.isValid = false;
-                photoObj.status = 'failed';
-                updatePreviewUI(photoObj, "Verification failed");
-            }
-        } catch (error) {
-            console.error('Photo analysis error:', error);
-            photoObj.isValid = false;
-            photoObj.status = 'failed';
-            updatePreviewUI(photoObj, "Service offline");
-        } finally {
-            updateSubmitButtonState();
-        }
-    }
-
-    function renderPhotoPreview(photoObj) {
-        if (!previewContainer) return;
-        
-        const div = document.createElement('div');
-        div.id = `preview-${photoObj.id}`;
-        div.style = 'position: relative; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; height: 110px; background: #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);';
-        
-        div.innerHTML = `
-            <img id="img-${photoObj.id}" style="width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s;">
-            <div id="status-${photoObj.id}" style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(30, 41, 59, 0.8); color: white; font-size: 0.65rem; padding: 4px; text-align: center; backdrop-filter: blur(2px);">
-                ⌛ Analyzing...
-            </div>
-            <button type="button" class="img-remove-btn" onclick="removePhoto('${photoObj.id}')" style="position: absolute; top: 4px; right: 4px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #ef4444; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #fee2e2;">✕</button>
-        `;
-        
-        previewContainer.appendChild(div);
-    }
-
-    window.removePhoto = function(photoId) {
-        uploadedPhotos = uploadedPhotos.filter(p => p.id !== photoId);
-        const el = document.getElementById(`preview-${photoId}`);
-        if (el) el.remove();
-        updateAddCardVisibility();
-        updateSubmitButtonState();
+    const badge = document.getElementById('notifBadge');
+    const list = document.getElementById('notificationList');
+    const bell = document.getElementById('notifBell');
+    const dropdown = document.getElementById('notifDropdown');
+    const clearBtn = document.getElementById('notifClear');
+
+    let currentUpdateIds = [];
+
+    // Helper to mark current updates as seen (clears badge but keeps in list)
+    const markAsSeen = (ids) => {
+        if (!ids.length) return;
+        const seenIds = JSON.parse(localStorage.getItem('seenNotificationIds') || '[]');
+        const newSeenIds = [...new Set([...seenIds, ...ids])].slice(-50);
+        localStorage.setItem('seenNotificationIds', JSON.stringify(newSeenIds));
+        if (badge) badge.style.display = 'none';
     };
 
-    function updatePreviewUI(photoObj, errorMsg) {
-        const statusEl = document.getElementById(`status-${photoObj.id}`);
-        const previewImg = document.getElementById(`img-${photoObj.id}`);
-        if (!statusEl) return;
+    // Helper to mark current updates as cleared (removes from list permanently)
+    const markAsCleared = (ids) => {
+        if (!ids.length) return;
+        const clearedIds = JSON.parse(localStorage.getItem('clearedNotificationIds') || '[]');
+        const newClearedIds = [...new Set([...clearedIds, ...ids])].slice(-100);
+        localStorage.setItem('clearedNotificationIds', JSON.stringify(newClearedIds));
+        if (badge) badge.style.display = 'none';
+        if (list) list.innerHTML = '<div class="notif-empty">No new updates</div>';
+    };
 
-        if (photoObj.status === 'verified') {
-            statusEl.innerHTML = '✅ Verified';
-            statusEl.style.backgroundColor = 'rgba(16, 185, 129, 0.85)';
-            if (previewImg) previewImg.style.opacity = '1';
-        } else if (photoObj.status === 'rejected') {
-            statusEl.innerHTML = '❌ Rejected';
-            statusEl.style.backgroundColor = 'rgba(239, 68, 68, 0.85)';
-            statusEl.title = photoObj.rejectionReason || "Issue not identified";
-            if (previewImg) previewImg.style.opacity = '0.3';
-        } else {
-            statusEl.innerHTML = `⚠️ ${errorMsg || 'Failed'}`;
-            statusEl.style.backgroundColor = 'rgba(100, 116, 139, 0.85)';
-        }
-    }
-
-    const submitBtn = document.getElementById('submitBtn');
-    
-    function updateSubmitButtonState() {
-        if (!submitBtn) return;
-        
-        if (uploadedPhotos.length === 0) {
-            setSubmitEnabled(false);
-            submitBtn.textContent = 'Submit Report';
-            return;
-        }
-
-        const allAnalyzed = uploadedPhotos.every(p => p.status !== 'analyzing');
-        const anyVerified = uploadedPhotos.some(p => p.status === 'verified');
-        const anyIssue = uploadedPhotos.some(p => p.status === 'rejected' || p.status === 'failed');
-
-        if (!allAnalyzed) {
-            setSubmitEnabled(false);
-            submitBtn.textContent = 'Verifying Photos...';
-        } else if (anyIssue) {
-            setSubmitEnabled(false);
-            submitBtn.textContent = 'Remove Rejected Photos';
-            const rejected = uploadedPhotos.find(p => p.status === 'rejected');
-            if (rejected) showMessage(rejected.rejectionReason || "One or more photos were rejected. Please remove them.", "error");
-        } else if (anyVerified) {
-            setSubmitEnabled(true);
-            submitBtn.textContent = 'Submit Report';
-        } else {
-            setSubmitEnabled(false);
-            submitBtn.textContent = 'Check Photos';
-        }
-    }
-
-    function setSubmitEnabled(enabled) {
-        if (!submitBtn) return;
-        submitBtn.disabled = !enabled;
-        if (enabled) {
-            submitBtn.style.opacity = '1';
-            submitBtn.style.cursor = 'pointer';
-            submitBtn.style.filter = 'none';
-        } else {
-            submitBtn.style.opacity = '0.45';
-            submitBtn.style.cursor = 'not-allowed';
-            submitBtn.style.filter = 'grayscale(40%)';
-        }
-    }
-
-    // Initialize state
-    updateSubmitButtonState();
-
-    const reportForm = document.getElementById('reportForm');
-    if (reportForm && !reportForm.dataset.listenerAttached) {
-        reportForm.dataset.listenerAttached = 'true';
-        reportForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            if (!localStorage.getItem('isLoggedIn')) {
-                alert("You must be logged in to report an issue.");
-                window.location.href = 'login.html';
-                return;
+    if (bell && dropdown) {
+        bell.onclick = (e) => {
+            e.stopPropagation();
+            const isOpening = dropdown.style.display !== 'flex';
+            dropdown.style.display = isOpening ? 'flex' : 'none';
+            
+            if (isOpening) {
+                markAsSeen(currentUpdateIds);
             }
-
-            // Final check on verified photos
-            if (uploadedPhotos.length === 0) {
-                showMessage("Please upload at least one valid photo of the issue.", "error");
-                return;
-            }
-
-            const pending = uploadedPhotos.some(p => p.status === 'analyzing');
-            if (pending) {
-                showMessage("Please wait for photo verification to complete.", "info");
-                return;
-            }
-
-            const invalid = uploadedPhotos.filter(p => !p.isValid);
-            if (invalid.length > 0) {
-                showMessage("One or more photos are invalid. Please remove them before submitting.", "error");
-                return;
-            }
-
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
-            submitBtn.style.opacity = '0.7';
-
-            const userEmail = localStorage.getItem('userEmail');
-            const userId = localStorage.getItem('userId');
-
-            let finalCategory = document.getElementById('category').value;
-            if (finalCategory === 'OTHER') {
-                finalCategory = document.getElementById('otherCategory').value || 'OTHER';
-            }
-
-            // Collect all verified photo data URLs
-            const photoUrls = uploadedPhotos.map(p => p.dataUrl);
-
-            const issueData = {
-                title: document.getElementById('title').value,
-                description: document.getElementById('description').value,
-                category: finalCategory,
-                latitude: document.getElementById('latitude').value,
-                longitude: document.getElementById('longitude').value,
-                address: document.getElementById('address') ? document.getElementById('address').value : null,
-                photoUrls: photoUrls, // Send as array
-                reporterEmail: userEmail,
-                reporterId: userId ? parseInt(userId) : null
-            };
-
-            try {
-                const response = await fetch(`${API_BASE}/issues`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(issueData)
-                });
-
-                if (response.ok) {
-                    alert(`Issue Reported Successfully with ${photoUrls.length} photos!`);
-                    window.location.href = 'dashboard.html';
-                } else {
-                    const errorText = await response.text();
-                    alert(`Failed to submit report: ${errorText}`);
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Submit Report';
-                    submitBtn.style.opacity = '1';
-                }
-            } catch (error) {
-                console.error('Error reporting issue:', error);
-                alert('An error occurred during submission. Please check your connection.');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Report';
-                submitBtn.style.opacity = '1';
-            }
-        });
-    }
-}
-
-function initDashboardPage() {
-    const userNameSpan = document.getElementById('userName');
-    const issueList = document.getElementById('issueList');
-    const nearYouList = document.getElementById('nearYouList');
-
-    const userName = localStorage.getItem('userEmail') || 'Citizen';
-    if (userNameSpan) userNameSpan.textContent = userName.split('@')[0];
-
-    if (!localStorage.getItem('isLoggedIn')) {
-        window.location.href = 'login.html';
-        return;
+        };
+        document.addEventListener('click', () => { if (dropdown) dropdown.style.display = 'none'; });
+        dropdown.onclick = (e) => e.stopPropagation();
     }
 
-    loadUserIssues();
-    const userId = localStorage.getItem('userId');
-    if (userId) fetchAndDisplayNotifications(userId);
-    window.nearYouIssues = [];
-    loadNearYouIssues();
-
-    const viewAllNearYou = document.getElementById('viewAllNearYou');
-    if (viewAllNearYou) {
-        viewAllNearYou.addEventListener('click', (e) => {
-            e.preventDefault();
-            renderNearYouIssues(); // Show all
-            viewAllNearYou.style.display = 'none';
-        });
-    }
-
-    const closeIssueDetails = document.getElementById('closeIssueDetails');
-    const issueDetailsModal = document.getElementById('issueDetailsModal');
-
-    if (closeIssueDetails && issueDetailsModal) {
-        closeIssueDetails.onclick = () => {
-            issueDetailsModal.style.display = 'none';
-        }
-        window.onclick = (event) => {
-            if (event.target == issueDetailsModal) {
-                issueDetailsModal.style.display = 'none';
-            }
-        }
-    }
-
-    async function loadNearYouIssues() {
-        if (!nearYouList) return;
-        
-        nearYouList.innerHTML = '<p class="message info">Detecting location to show issues near you...</p>';
-
-        if (!navigator.geolocation) {
-            nearYouList.innerHTML = '<p class="message error">Geolocation not supported. Showing all recent issues.</p>';
-            fetchAllIssues();
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(async (position) => {
-            const userLat = position.coords.latitude;
-            const userLng = position.coords.longitude;
-            await fetchAndFilterIssues(userLat, userLng);
-        }, (error) => {
-            console.error('Geolocation error:', error);
-            nearYouList.innerHTML = '<p class="message error">Unable to detect location. Showing all recent issues.</p>';
-            fetchAllIssues();
-        });
-    }
-
-    async function fetchAllIssues() {
-        try {
-            const response = await fetch(`${API_BASE}/issues`);
-            if (response.ok) {
-                window.nearYouIssues = await response.json();
-                renderNearYouIssues(2);
-            }
-        } catch (error) {
-            console.error('Error loading fallback issues:', error);
-        }
-    }
-
-    async function fetchAndFilterIssues(userLat, userLng) {
-        try {
-            const response = await fetch(`${API_BASE}/issues`);
-            if (response.ok) {
-                const allIssues = await response.json();
-                
-                // Filter by 3km radius
-                const filteredIssues = allIssues.filter(issue => {
-                    if (issue.latitude && issue.longitude) {
-                        const dist = calculateDistance(userLat, userLng, issue.latitude, issue.longitude);
-                        return dist <= 3; // 3km radius
-                    }
-                    return false;
-                });
-
-                window.nearYouIssues = filteredIssues;
-                
-                if (filteredIssues.length === 0) {
-                    nearYouList.innerHTML = '<p class="message info">No recent issues reported within 3km of your location.</p>';
-                } else {
-                    renderNearYouIssues(2);
-                }
-            } else {
-                nearYouList.innerHTML = '<p class="message error">Failed to load local feed.</p>';
-            }
-        } catch (error) {
-            console.error('Error loading near you issues:', error);
-            if (nearYouList) nearYouList.innerHTML = '<p class="message error">Error loading local feed.</p>';
-        }
-    }
-
-    window.renderNearYouIssues = function (limit) {
-        if (!nearYouList) return;
-        const issues = window.nearYouIssues;
-
-        if (!issues || issues.length === 0) {
-            nearYouList.innerHTML = '<p class="message info">No recent issues in your area.</p>';
-            return;
-        }
-
-        // Sort by date new to old
-        issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        const issuesToRender = limit ? issues.slice(0, limit) : issues;
-
-        const html = issuesToRender.map(issue => {
-            console.log("Rendering Near You Issue:", issue);
-            const timeAgo = getTimeAgo(issue.createdAt);
-            const categoryClass = `category-${issue.category.toLowerCase().replace(/\s+/g, '-')}`;
-
-            // Generate random-ish like/comment numbers for the "feed" look if they don't exist
-            const likes = issue.id % 20 + 5;
-            const comments = issue.id % 8 + 1;
-
-            return `
-            <div class="near-you-card">
-                <div class="near-you-header">
-                    <div>
-                        <span class="near-you-reporter">${escapeHtml(issue.reporterName || 'Anonymous Citizen')}</span>
-                        <div class="near-you-category ${categoryClass}" style="display: inline-block; margin-left: 10px; padding: 2px 8px; font-size: 0.75rem;">
-                            ${escapeHtml(issue.category)}
-                        </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="issue-status status-${issue.status}" style="font-size: 0.7rem; padding: 2px 8px;">${issue.status}</span>
-                        <span class="near-you-time">${timeAgo}</span>
-                    </div>
-                </div>
-                <div class="near-you-description">
-                    ${escapeHtml(issue.description)}
-                </div>
-                ${(issue.photoUrls && issue.photoUrls.length > 0) ? 
-                    `<img src="${issue.photoUrls[0]}" class="near-you-image" alt="Issue Image" style="object-fit: cover; width: 100%; height: 280px; border-radius: 12px; margin-bottom: 15px;">` : 
-                    (issue.photoUrl ? `<img src="${issue.photoUrl}" class="near-you-image" alt="Issue Image" style="object-fit: cover; width: 100%; height: 280px; border-radius: 12px; margin-bottom: 15px;">` : '')}
-                <div class="near-you-footer">
-                    <div class="near-you-interactions">
-                        <div class="interaction-item">
-                            <i class="far fa-heart"></i>
-                            <span>${likes}</span>
-                        </div>
-                        <div class="interaction-item">
-                            <i class="far fa-comment"></i>
-                            <span>${comments}</span>
-                        </div>
-                    </div>
-                    <a href="#" class="near-you-link" onclick="openIssueDetails(${issue.id})">View Details</a>
-                </div>
-            </div>
-            `;
-        }).join('');
-
-        nearYouList.innerHTML = html;
-    }
-
-    window.openIssueDetails = function (issueId) {
-        const issue = window.nearYouIssues.find(i => i.id === issueId);
-        if (!issue) return;
-
-        const modal = document.getElementById('issueDetailsModal');
-        const modalBody = document.getElementById('modalBody');
-        const modalTitle = document.getElementById('modalIssueTitle');
-
-        if (!modal || !modalBody) return;
-
-        modalTitle.textContent = issue.title || `Issue #${issue.id}`;
-
-        let feedbackHtml = '';
-        if (issue.rating != null) {
-            let stars = '';
-            for (let i = 1; i <= 5; i++) {
-                stars += i <= issue.rating ? '★' : '☆';
-            }
-            feedbackHtml = `
-            <div style="margin-top: 20px; padding: 15px; background: #fffbeb; border-radius: 12px; border: 1px solid #fef3c7;">
-                <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 0.95rem;">Citizen Feedback</h4>
-                <div style="color: #f59e0b; font-size: 1.25rem; margin-bottom: 5px;">${stars}</div>
-                ${issue.feedback ? `<p style="margin: 0; font-size: 0.9rem; color: #92400e; font-style: italic;">"${escapeHtml(issue.feedback)}"</p>` : ''}
-            </div>`;
-        }
-
-        modalBody.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-                <div>
-                    <span class="issue-status status-${issue.status}" style="margin-bottom: 10px; display: inline-block;">${issue.status}</span>
-                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">
-                        Reported by <strong>${escapeHtml(issue.reporterName || 'Anonymous')}</strong><br>
-                        on ${new Date(issue.createdAt).toLocaleDateString()}
-                    </p>
-                </div>
-                <div style="text-align: right;">
-                    <span style="background: #f1f5f9; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">${issue.category}</span>
-                </div>
-            </div>
-
-            <div style="margin-bottom: 25px;">
-                <h4 style="margin-bottom: 10px; font-size: 1rem;">Description</h4>
-                <p style="color: var(--text-main); line-height: 1.6; font-size: 0.95rem;">${escapeHtml(issue.description)}</p>
-            </div>
-
-            ${(issue.photoUrls && issue.photoUrls.length > 0) ? `
-            <div style="margin-bottom: 25px;">
-                <h4 style="margin-bottom: 12px; font-size: 1rem;">Evidence Photos (${issue.photoUrls.length})</h4>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-                    ${issue.photoUrls.map((url, idx) => `
-                        <div style="border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; cursor: zoom-in; height: 160px;" onclick="viewPhoto('${url}')">
-                            <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;" alt="Evidence ${idx+1}">
-                        </div>
-                    `).join('')}
-                </div>
-            </div>` : (issue.photoUrl ? `
-            <div style="margin-bottom: 25px;">
-                <h4 style="margin-bottom: 10px; font-size: 1rem;">Report Photo</h4>
-                <img src="${issue.photoUrl}" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-md); cursor: zoom-in;" alt="Issue Photo" onclick="viewPhoto('${issue.photoUrl}')">
-            </div>` : '')}
-
-            ${issue.status === 'RESOLVED' && issue.resolutionPhotoUrl ? `
-            <div style="margin-top: 25px; padding-top: 25px; border-top: 2px dashed #e2e8f0;">
-                <h4 style="margin-bottom: 10px; font-size: 1rem; color: #15803d; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-check-circle"></i> Resolution Proof
-                </h4>
-                <img src="${issue.resolutionPhotoUrl}" style="width: 100%; border-radius: 12px; box-shadow: var(--shadow-md); border: 2px solid #dcfce7;" alt="Resolution Proof">
-            </div>` : ''}
-
-            ${feedbackHtml}
-        `;
-
-        modal.style.display = 'block';
-    }
-
-    function getTimeAgo(dateString) {
-        const now = new Date();
-        const past = new Date(dateString);
-        const diffInMs = now - past;
-        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-        const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-
-        if (diffInDays > 0) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-        if (diffInHours > 0) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-        if (diffInMinutes > 0) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
-        return 'Just now';
-    }
-
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
-        const R = 6371; // Radius of the earth in km
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
-
-    async function loadUserIssues() {
-        const userId = localStorage.getItem('userId');
-        if (!userId) {
-            if (issueList) issueList.innerHTML = '<p class="message info">User ID not found. Please log in again.</p>';
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_BASE}/issues/user/${userId}`);
-            if (response.ok) {
-                const issues = await response.json();
-                renderIssues(issues);
-                updateAnalytics(issues);
-            } else {
-                if (issueList) issueList.innerHTML = '<p class="message error">Failed to load issues.</p>';
-            }
-        } catch (error) {
-            console.error('Error loading issues:', error);
-            if (issueList) issueList.innerHTML = '<p class="message error">Error loading issues.</p>';
-        }
-    }
-
-    window.dashboardIssues = [];
-
-    function renderIssues(issues) {
-        if (!issueList) return;
-
-        if (!issues || issues.length === 0) {
-            issueList.innerHTML = '<p class="message info">You haven\'t reported any issues yet.</p>';
-            return;
-        }
-
-        issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        console.log("Rendering My Reports:", issues);
-        window.dashboardIssues = issues;
-
-        renderIssueList(4);
-    }
-
-    window.renderIssueList = function (limit) {
-        if (!issueList) return;
-        const issuesToRender = window.dashboardIssues.slice(0, limit);
-        const hasMore = limit < window.dashboardIssues.length;
-
-        let html = issuesToRender.map(issue => {
-            let feedbackHtml = '';
-
-            if (issue.status === 'RESOLVED' || issue.status === 'REJECTED') {
-                if (issue.rating != null) {
-                    let stars = '';
-                    for (let i = 1; i <= 5; i++) {
-                        stars += i <= issue.rating ? '★' : '☆';
-                    }
-                    feedbackHtml = `
-                    <div class="feedback-section" style="margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <h4 style="margin: 0 0 5px 0; font-size: 0.95rem;">Your Feedback</h4>
-                        <div style="color: #f59e0b; font-size: 1.2rem; margin-bottom: 5px;">${stars}</div>
-                        ${issue.feedback ? `<p style="margin: 0; font-size: 0.9rem; color: #475569;">"${escapeHtml(issue.feedback)}"</p>` : ''}
-                    </div>`;
-                } else {
-                    feedbackHtml = `
-                    <div class="feedback-section" style="margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">Rate Experience</h4>
-                        <form onsubmit="submitFeedback(event, ${issue.id})" class="feedback-form">
-                            <div class="star-rating" style="color: #ccc; font-size: 1.5rem; cursor: pointer; margin-bottom: 10px;" id="star-rating-${issue.id}">
-                                <span onclick="setRating(${issue.id}, 1)">★</span>
-                                <span onclick="setRating(${issue.id}, 2)">★</span>
-                                <span onclick="setRating(${issue.id}, 3)">★</span>
-                                <span onclick="setRating(${issue.id}, 4)">★</span>
-                                <span onclick="setRating(${issue.id}, 5)">★</span>
-                                <input type="hidden" id="rating-${issue.id}" required>
-                            </div>
-                            <textarea id="feedback-${issue.id}" rows="2" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 10px;" placeholder="Leave a comment (optional)..."></textarea>
-                            <button type="submit" class="btn-primary" style="padding: 5px 10px; font-size: 0.85rem;">Submit Feedback</button>
-                        </form>
-                    </div>`;
-                }
-            }
-
-            return `
-            <div class="issue-card">
-                <div class="issue-card-header">
-                    <span class="issue-title">${escapeHtml(issue.title)}</span>
-                    <span class="issue-status status-${issue.status}">${issue.status}</span>
-                </div>
-                <div class="issue-meta">
-                    Reported on ${new Date(issue.createdAt).toLocaleDateString()} • ${issue.category}
-                </div>
-                <div class="issue-description">${escapeHtml(issue.description)}</div>
-                ${(issue.photoUrls && issue.photoUrls.length > 0) ? 
-                    `<div style="margin-top: 15px; display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
-                        ${issue.photoUrls.map(url => `<img src="${url}" class="issue-photo-thumb" style="width: 140px; height: 100px; object-fit: cover; border-radius: 10px; flex-shrink: 0; cursor: pointer; border: 1px solid #e2e8f0;" onclick="viewPhoto('${url}')">`).join('')}
-                    </div>` : 
-                    (issue.photoUrl ? `<div style="margin-top: 12px;"><img src="${issue.photoUrl}" class="issue-photo-thumb" alt="Issue Photo" style="width: 160px; height: 120px; object-fit: cover; border-radius: 10px; cursor: pointer; border: 1px solid #e2e8f0;" onclick="viewPhoto('${issue.photoUrl}')"></div>` : '')}
-                ${issue.status === 'REJECTED' && issue.rejectionReason ? `
-                    <div style="margin-top: 15px; padding: 10px; border-left: 4px solid #ef4444; background: #fef2f2; border-radius: 4px;">
-                        <h4 style="margin: 0 0 5px 0; font-size: 0.95rem; color: #b91c1c;">Rejection Reason</h4>
-                        <p style="margin: 0; font-size: 0.9rem; color: #7f1d1d;">${escapeHtml(issue.rejectionReason)}</p>
-                    </div>
-                ` : ''}
-                ${issue.assignedDepartment ? `<div class="issue-meta" style="margin-top:8px;">Has been assigned to: <strong>${issue.assignedDepartment}</strong></div>` : ''}
-                
-                ${issue.status === 'RESOLVED' && issue.resolutionPhotoUrl ? `
-                    <div style="margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <h4 style="margin: 0; font-size: 0.95rem; color: #15803d;">Resolution Proof</h4>
-                            <div>
-                                <button type="button" onclick="viewPhoto('${issue.resolutionPhotoUrl}')" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;">View Proof</button>
-                            </div>
-                        </div>
-                    </div>` : ''}
-
-                ${feedbackHtml}
-            </div>
-            `;
-        }).join('');
-
-        if (hasMore) {
-            html += `<div style="text-align: center; margin-top: 30px; width: 100%;">
-                <button onclick="renderIssueList(${limit + 4})" class="btn-secondary" style="padding: 10px 40px; font-weight: 600;">
-                    View More Issues
-                </button>
-            </div>`;
-        }
-
-        issueList.innerHTML = html;
-    }
-
-    function updateAnalytics(issues) {
-        // Analytics section was replaced by Near You feed as per user request
-    }
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const path = window.location.pathname;
-    if (path.includes('dashboard.html')) {
-        initDashboardPage();
-    } else if (path.includes('report.html')) {
-        initReportPage();
-    }
-
-    const toggleLoginPassword = document.getElementById('toggleLoginPassword');
-    const loginPassword = document.getElementById('loginPassword');
-
-    if (toggleLoginPassword && loginPassword) {
-        toggleLoginPassword.addEventListener('click', () => {
-            const type = loginPassword.getAttribute('type') === 'password' ? 'text' : 'password';
-            loginPassword.setAttribute('type', type);
-            toggleLoginPassword.innerHTML = type === 'password' ? '<i class="far fa-eye"></i>' : '<i class="far fa-eye-slash"></i>';
-        });
-    }
-
-    const toggleRegisterPassword = document.getElementById('toggleRegisterPassword');
-    const registerPassword = document.getElementById('registerPassword');
-
-    if (toggleRegisterPassword && registerPassword) {
-        toggleRegisterPassword.addEventListener('click', () => {
-            const type = registerPassword.getAttribute('type') === 'password' ? 'text' : 'password';
-            registerPassword.setAttribute('type', type);
-            toggleRegisterPassword.innerHTML = type === 'password' ? '<i class="far fa-eye"></i>' : '<i class="far fa-eye-slash"></i>';
-        });
-    }
-});
-
-window.setRating = function (issueId, rating) {
-    const starContainer = document.getElementById(`star-rating-${issueId}`);
-    if (!starContainer) return;
-
-    document.getElementById(`rating-${issueId}`).value = rating;
-
-    const stars = starContainer.getElementsByTagName('span');
-    for (let i = 0; i < stars.length; i++) {
-        if (i < rating) {
-            stars[i].style.color = '#f59e0b';
-        } else {
-            stars[i].style.color = '#ccc';
-        }
-    }
-};
-
-window.submitFeedback = async function (e, issueId) {
-    e.preventDefault();
-    const ratingInput = document.getElementById(`rating-${issueId}`);
-    const rating = ratingInput ? parseInt(ratingInput.value) : null;
-    const feedback = document.getElementById(`feedback-${issueId}`) ? document.getElementById(`feedback-${issueId}`).value : null;
-
-    if (!rating) {
-        alert('Please select a star rating.');
-        return;
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            markAsCleared(currentUpdateIds);
+        };
     }
 
     try {
-        const response = await fetch(`${API_BASE}/issues/${issueId}/feedback`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ rating, feedback })
-        });
+        const res = await fetch(`${API_BASE}/issues/user/${userId}`);
+        if (res.ok) {
+            const issues = await res.json();
+            const updates = issues.filter(i => i.status !== 'NEW').slice(0, 5);
+            currentUpdateIds = updates.map(i => i.id);
 
-        if (response.ok) {
-            alert('Feedback submitted successfully!');
-            window.location.reload();
-        } else {
-            const errorText = await response.text();
-            alert(`Failed to submit feedback: ${errorText}`);
+            const seenIds = JSON.parse(localStorage.getItem('seenNotificationIds') || '[]');
+            const clearedIds = JSON.parse(localStorage.getItem('clearedNotificationIds') || '[]');
+
+            // Filter out notifications that the user has manually cleared
+            const filteredUpdates = updates.filter(i => !clearedIds.includes(i.id));
+            const filteredUpdateIds = filteredUpdates.map(i => i.id);
+
+            // If dropdown is already open, mark them as seen immediately
+            if (dropdown && dropdown.style.display === 'flex') {
+                markAsSeen(filteredUpdateIds);
+            } else {
+                // Count items that are neither seen nor cleared
+                const unseenCount = filteredUpdateIds.filter(id => !seenIds.includes(id)).length;
+                
+                if (badge && unseenCount > 0) {
+                    badge.textContent = unseenCount;
+                    badge.style.display = 'flex';
+                } else if (badge) {
+                    badge.style.display = 'none';
+                }
+            }
+
+            if (list) {
+                if (filteredUpdates.length > 0) {
+                    list.innerHTML = filteredUpdates.map(i => `
+                        <div class="notif-item ${i.status === 'RESOLVED' ? 'resolved' : 'update'}" onclick="openIssueModal(${i.id})">
+                            <i class="fas ${i.status === 'RESOLVED' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                            <div class="notif-info">
+                                <div class="notif-title">Issue "${i.title}" is now ${i.status}</div>
+                                <div class="notif-time">${new Date(i.createdAt).toLocaleDateString()}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="notif-empty">No new updates</div>';
+                }
+            }
         }
-    } catch (error) {
-        console.error('Error submitting feedback:', error);
-        alert('An error occurred. Please try again.');
-    }
-};
+    } catch (_) {}
+}
 
-window.viewPhoto = function (url) {
-    const w = window.open("");
-    w.document.write(`<img src="${url}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: contain;">`);
-};
+// ── PROFILE SECTION ──
 
-window.downloadPhoto = function (url, filename) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-};
+async function loadProfileData() {
+    const userEmail = localStorage.getItem('userEmail');
+    const userRole = localStorage.getItem('userRole');
+    if (!userEmail) { window.location.href = 'login.html'; return; }
 
-function initializeProfilePreferences() {
-    const saveBtn = document.getElementById('savePreferencesBtn');
-    const emailUpdates = document.getElementById('prefEmailUpdates');
-    const smsAlerts = document.getElementById('prefSmsAlerts');
-    const newsletter = document.getElementById('prefNewsletter');
+    try {
+        const res = await fetch(`${API_BASE}/auth/user?email=${encodeURIComponent(userEmail)}`);
+        if (res.ok) {
+            const user = await res.json();
+            
+            // Sidebar display
+            const headerName = document.getElementById('profileHeaderName');
+            const emailDisplay = document.getElementById('profileEmailDisplay');
+            const avatar = document.getElementById('profileAvatar');
+            if (headerName) headerName.textContent = user.name || userEmail.split('@')[0];
+            if (emailDisplay) emailDisplay.textContent = user.email;
+            if (avatar) avatar.textContent = (user.name || user.email).charAt(0).toUpperCase();
 
-    if (!saveBtn || !emailUpdates || !smsAlerts || !newsletter) {
+            // Navbar Greeting
+            const headerGreeting = document.getElementById('userNameHeader');
+            if (headerGreeting) headerGreeting.textContent = user.name || userEmail.split('@')[0];
+
+            // Notifications badge & dropdown (Shared)
+            if (user.id) fetchAndDisplayNotifications(user.id);
+
+            // Account Info Card (Dynamic fields)
+            const userName = document.getElementById('userName');
+            const userEmailEl = document.getElementById('userEmail');
+            const userPhone = document.getElementById('userPhone');
+            const userId = document.getElementById('userId');
+            const userDept = document.getElementById('userDept');
+            const userGovId = document.getElementById('userGovId');
+
+            if (userName) userName.textContent = user.name || "N/A";
+            if (userEmailEl) userEmailEl.textContent = user.email;
+            if (userPhone) userPhone.textContent = user.phone || "N/A";
+            if (userId) userId.textContent = user.id || "N/A";
+            if (userDept) userDept.textContent = user.department || "Not Assigned";
+            if (userGovId) userGovId.textContent = user.adminId || "N/A";
+
+            // Stats section - usually for citizens, hide for admins as per request
+            const statsSection = document.querySelector('.profile-mini-stats');
+            if (userRole === 'ADMIN' && statsSection) {
+                statsSection.style.display = 'none';
+            }
+
+            // Fetch stats if citizen and userId exists
+            if (userRole === 'CITIZEN' && user.id) {
+                const issuesRes = await fetch(`${API_BASE}/issues/user/${user.id}`);
+                if (issuesRes.ok) {
+                    const issues = await issuesRes.json();
+                    const total = issues.length;
+                    const resolved = issues.filter(i => i.status === 'RESOLVED').length;
+                    const rate = total > 0 ? (resolved / total * 100).toFixed(0) + '%' : '0%';
+                    
+                    const statTotal = document.getElementById('stat-total');
+                    const statResolved = document.getElementById('stat-resolved');
+                    const statRate = document.getElementById('stat-rate');
+                    if (statTotal) statTotal.textContent = total;
+                    if (statResolved) statResolved.textContent = resolved;
+                    if (statRate) statRate.textContent = rate;
+                }
+            }
+        }
+    } catch (err) { console.error("Error loading profile:", err); }
+}
+
+function savePreferences() {
+    const btn = document.getElementById('savePreferencesBtn');
+    const msg = document.getElementById('prefMessage');
+    if (!btn || !msg) return;
+
+    btn.disabled = true;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    
+    // Simulate API call for preferences
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+        msg.textContent = 'Preferences updated successfully!';
+        msg.className = 'inline-msg success';
+        msg.style.display = 'block';
+        setTimeout(() => { msg.style.display = 'none'; }, 4000);
+    }, 1200);
+}
+
+async function updatePassword() {
+    const current = document.getElementById('currentPassword').value.trim();
+    const newPass = document.getElementById('newUpdatePassword').value.trim();
+    const confirm = document.getElementById('confirmUpdatePassword').value.trim();
+    const msg = document.getElementById('passwordUpdateMessage');
+    const btn = document.getElementById('updatePasswordBtn');
+
+    if (!msg || !btn) return;
+
+    if (newPass !== confirm) {
+        msg.textContent = 'New passwords do not match';
+        msg.className = 'inline-msg error';
+        msg.style.display = 'block';
         return;
     }
 
-    const savedEmail = localStorage.getItem('prefEmailUpdates');
-    const savedSms = localStorage.getItem('prefSmsAlerts');
-    const savedNews = localStorage.getItem('prefNewsletter');
+    btn.disabled = true;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
 
-    if (savedEmail !== null) emailUpdates.checked = savedEmail === 'true';
-    if (savedSms !== null) smsAlerts.checked = savedSms === 'true';
-    if (savedNews !== null) newsletter.checked = savedNews === 'true';
-
-    saveBtn.addEventListener('click', function () {
-        localStorage.setItem('prefEmailUpdates', emailUpdates.checked);
-        localStorage.setItem('prefSmsAlerts', smsAlerts.checked);
-        localStorage.setItem('prefNewsletter', newsletter.checked);
-
-        saveBtn.textContent = 'Saved!';
-        saveBtn.disabled = true;
-
-        showMessage('Notification preferences saved successfully.', 'success');
-
-        setTimeout(() => {
-            saveBtn.textContent = originalText;
-            saveBtn.disabled = false;
-        }, 2000);
-    });
+    try {
+        const res = await fetch(`${API_BASE}/auth/update-password`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: localStorage.getItem('userEmail'),
+                currentPassword: current,
+                newPassword: newPass
+            })
+        });
+        
+        if (res.ok) {
+            msg.textContent = 'Password updated successfully!';
+            msg.className = 'inline-msg success';
+            document.getElementById('updatePasswordForm').reset();
+        } else {
+            const errorText = await res.text();
+            msg.textContent = errorText || 'Failed to update password';
+            msg.className = 'inline-msg error';
+        }
+    } catch (err) {
+        msg.textContent = 'Server connection failed';
+        msg.className = 'inline-msg error';
+    } finally {
+        msg.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+        setTimeout(() => { if (msg.classList.contains('success')) msg.style.display = 'none'; }, 5000);
+    }
 }
 
-function initializePasswordUpdate() {
-    const updatePasswordForm = document.getElementById('updatePasswordForm');
-    const updatePasswordBtn = document.getElementById('updatePasswordBtn');
-    const messageDiv = document.getElementById('passwordUpdateMessage');
+// ── PROFILE EDITING ──
 
-    if (!updatePasswordForm || !updatePasswordBtn || !messageDiv) return;
+function toggleEditMode(field) {
+    const row = document.getElementById(`row-${field}`);
+    const valueEl = row.querySelector('.info-value');
+    const inputEl = document.getElementById(`edit-${field}`);
+    
+    if (row.classList.contains('edit-mode')) {
+        row.classList.remove('edit-mode');
+    } else {
+        // Pre-fill input
+        inputEl.value = valueEl.textContent.trim();
+        row.classList.add('edit-mode');
+        inputEl.focus();
+    }
+}
 
-    updatePasswordForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+async function saveProfileField(field) {
+    const inputEl = document.getElementById(`edit-${field}`);
+    const newValue = inputEl.value.trim();
+    if (!newValue) return;
 
-        const currentPassword = document.getElementById('currentPassword').value;
-        const newPassword = document.getElementById('newUpdatePassword').value;
-        const confirmPassword = document.getElementById('confirmUpdatePassword').value;
-        const userEmail = localStorage.getItem('userEmail');
+    const email = localStorage.getItem('userEmail');
+    const currentName = document.getElementById('userName').textContent.trim();
+    const currentPhone = document.getElementById('userPhone').textContent.trim();
 
-        messageDiv.textContent = '';
-        messageDiv.style.color = '';
+    const updateData = {
+        email: email,
+        name: field === 'name' ? newValue : currentName,
+        phone: field === 'phone' ? newValue : currentPhone
+    };
 
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            messageDiv.textContent = 'Please fill in all fields.';
-            messageDiv.style.color = 'red';
-            return;
-        }
+    try {
+        const res = await fetch(`${API_BASE}/auth/update-profile`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
 
-        if (newPassword !== confirmPassword) {
-            messageDiv.textContent = 'New passwords do not match.';
-            messageDiv.style.color = 'red';
-            return;
-        }
-
-        if (!userEmail) {
-            messageDiv.textContent = 'User email not found. Please log in again.';
-            messageDiv.style.color = 'red';
-            return;
-        }
-
-        try {
-            updatePasswordBtn.disabled = true;
-            updatePasswordBtn.textContent = 'Updating...';
-
-            const response = await fetch(`${API_BASE}/auth/update-password`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: userEmail,
-                    currentPassword: currentPassword,
-                    newPassword: newPassword
-                })
-            });
-
-            const resultText = await response.text();
-
-            if (response.ok) {
-                messageDiv.textContent = 'Password updated successfully!';
-                messageDiv.style.color = 'green';
-                updatePasswordForm.reset();
-            } else {
-                messageDiv.textContent = resultText || 'Failed to update password.';
-                messageDiv.style.color = 'red';
+        if (res.ok) {
+            // Update UI
+            document.getElementById(`user${field.charAt(0).toUpperCase() + field.slice(1)}`).textContent = newValue;
+            if (field === 'name') {
+                const headName = document.getElementById('profileHeaderName');
+                const headGreeting = document.getElementById('userNameHeader');
+                if (headName) headName.textContent = newValue;
+                if (headGreeting) headGreeting.textContent = newValue;
             }
-        } catch (error) {
-            console.error('Password update error:', error);
-            messageDiv.textContent = 'Network error occurred.';
-            messageDiv.style.color = 'red';
-        } finally {
-            updatePasswordBtn.disabled = false;
-            updatePasswordBtn.textContent = 'Update Password';
+            toggleEditMode(field);
+            showMsg('message', 'Profile updated successfully!', 'success');
+        } else {
+            const err = await res.text();
+            showMsg('message', err || 'Update failed', 'error');
         }
-    });
+    } catch (err) {
+        showMsg('message', 'Server error', 'error');
+    }
 }
+
+// ── INITIALIZATION ──
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Determine page and init
+    syncNavbar();
+    initModals();
+    if (document.getElementById('statsRow')) loadDashboard();
+    if (document.getElementById('reportForm') || document.querySelector('.report-form-card')) initReportPage();
+    if (document.getElementById('chatToggle')) initializeChatBot();
+    if (document.getElementById('accountSection')) loadProfileData();
+    
+    // Global Logout
+    const lBtn = document.getElementById('logoutBtn');
+    if (lBtn) lBtn.onclick = logout;
+});

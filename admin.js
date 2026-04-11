@@ -1,6 +1,19 @@
-const API_BASE = 'http://localhost:8080/api';
+// API_BASE is declared in main.js
 let allIssues = [];
-let currentView = 'ALL';
+let currentView = 'ACTIVE';
+
+function fixIssueUrls(issues) {
+    const baseUrl = API_BASE.replace('/api', '');
+    if (!Array.isArray(issues)) issues = [issues];
+    issues.forEach(issue => {
+        if (issue.photoUrl && issue.photoUrl.startsWith('/')) issue.photoUrl = baseUrl + issue.photoUrl;
+        if (issue.photoUrls && issue.photoUrls.length > 0) {
+            issue.photoUrls = issue.photoUrls.map(url => url.startsWith('/') ? baseUrl + url : url);
+        }
+        if (issue.resolutionPhotoUrl && issue.resolutionPhotoUrl.startsWith('/')) issue.resolutionPhotoUrl = baseUrl + issue.resolutionPhotoUrl;
+    });
+    return issues;
+}
 
 document.addEventListener('DOMContentLoaded', function () {
     const userRole = localStorage.getItem('userRole');
@@ -12,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     loadAdminProfile();
     loadIssues();
-    updateActiveBtn('btnActive'); // Set initial active button
+    updateActiveBtn('btnActive'); 
 });
 
 function updateActiveBtn(activeId) {
@@ -21,118 +34,64 @@ function updateActiveBtn(activeId) {
         const btn = document.getElementById(id);
         if (btn) {
             if (id === activeId) {
-                btn.classList.add('active-nav');
+                btn.classList.add('active');
             } else {
-                btn.classList.remove('active-nav');
+                btn.classList.remove('active');
             }
         }
     });
 }
 
-function toggleAdminProfile() {
-    updateActiveBtn('btnProfile');
-    const profileDiv = document.querySelector('.user-info');
-    const issuesSection = document.getElementById('issuesSection');
-    if (profileDiv) {
-        profileDiv.style.display = 'block';
-        if (issuesSection) issuesSection.style.display = 'none';
-    }
+function updateStats() {
+    const total = allIssues.length;
+    const inProgress = allIssues.filter(i => i.status === 'IN_PROGRESS' || i.status === 'NEW').length;
+    const resolved = allIssues.filter(i => i.status === 'RESOLVED').length;
+    const rejected = allIssues.filter(i => i.status === 'REJECTED').length;
+
+    document.getElementById('adminTotalIssues').textContent = total;
+    document.getElementById('adminInProgress').textContent = inProgress;
+    document.getElementById('adminResolved').textContent = resolved;
+    document.getElementById('adminRejected').textContent = rejected;
 }
 
-async function updateAdminPassword() {
-    const currentPassword = document.getElementById('currentPassword').value;
-    const newPassword = document.getElementById('newPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    const messageEl = document.getElementById('passwordMessage');
-    const email = localStorage.getItem('userEmail');
-
-    if (newPassword !== confirmPassword) {
-        messageEl.style.color = 'red';
-        messageEl.textContent = 'New passwords do not match!';
-        return;
-    }
-
-    const btn = document.getElementById('updatePasswordBtn');
-    btn.disabled = true;
-    btn.textContent = 'Updating...';
-
-    try {
-        const response = await fetch(`${API_BASE}/auth/update-password`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: email,
-                currentPassword: currentPassword,
-                newPassword: newPassword
-            })
-        });
-
-        if (response.ok) {
-            messageEl.style.color = 'green';
-            messageEl.textContent = 'Password updated successfully!';
-            document.getElementById('updatePasswordForm').reset();
-        } else {
-            const error = await response.text();
-            messageEl.style.color = 'red';
-            messageEl.textContent = error || 'Update failed.';
-        }
-    } catch (err) {
-        messageEl.style.color = 'red';
-        messageEl.textContent = 'Connection error.';
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Update Password';
+function toggleAdminProfile() {
+    updateActiveBtn('btnProfile');
+    const profilePanel = document.getElementById('adminProfilePanel');
+    const issuesSection = document.getElementById('issuesSection');
+    if (profilePanel) {
+        profilePanel.style.display = 'block';
+        if (issuesSection) issuesSection.style.display = 'none';
     }
 }
 
 function showActiveIssues() {
     updateActiveBtn('btnActive');
     currentView = 'ACTIVE';
-    const profileDiv = document.querySelector('.user-info');
+    const profilePanel = document.getElementById('adminProfilePanel');
     const issuesSection = document.getElementById('issuesSection');
-    if (profileDiv) profileDiv.style.display = 'none';
+    if (profilePanel) profilePanel.style.display = 'none';
     if (issuesSection) issuesSection.style.display = 'block';
 
     const activeIssues = allIssues.filter(i => i.status === 'NEW' || i.status === 'IN_PROGRESS');
     renderIssuesTable(activeIssues);
 
-    const subTitle = document.querySelector('#issuesSection h3');
-    if (subTitle) subTitle.textContent = 'Active Civic Issues';
+    document.getElementById('tableTitle').textContent = 'Active Issues';
+    document.getElementById('tableSubtitle').textContent = 'Manage and update reported civic problems';
 }
 
 function showResolvedIssues() {
     updateActiveBtn('btnResolved');
     currentView = 'RESOLVED';
-    const profileDiv = document.querySelector('.user-info');
+    const profilePanel = document.getElementById('adminProfilePanel');
     const issuesSection = document.getElementById('issuesSection');
-    if (profileDiv) profileDiv.style.display = 'none';
+    if (profilePanel) profilePanel.style.display = 'none';
     if (issuesSection) issuesSection.style.display = 'block';
 
     const resolvedIssues = allIssues.filter(i => i.status === 'RESOLVED' || i.status === 'REJECTED');
     renderIssuesTable(resolvedIssues);
 
-    const subTitle = document.querySelector('#issuesSection h3');
-    if (subTitle) subTitle.textContent = 'Resolved & Rejected Civic Issues';
-}
-
-function refreshCurrentView() {
-    if (currentView === 'ACTIVE') {
-        showActiveIssues();
-    } else if (currentView === 'RESOLVED') {
-        showResolvedIssues();
-    } else {
-        renderIssuesTable(allIssues);
-        const subTitle = document.querySelector('#issuesSection h3');
-        if (subTitle) subTitle.textContent = 'Reported Civic Issues';
-    }
-}
-
-function logout() {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userId');
-    window.location.href = 'login.html';
+    document.getElementById('tableTitle').textContent = 'Resolved & Rejected';
+    document.getElementById('tableSubtitle').textContent = 'Historical records of addressed citizen concerns';
 }
 
 async function loadAdminProfile() {
@@ -143,34 +102,123 @@ async function loadAdminProfile() {
         const response = await fetch(`${API_BASE}/auth/user?email=${encodeURIComponent(email)}`);
         if (response.ok) {
             const user = await response.json();
-
-            const nameEl = document.getElementById('adminName');
-            const emailEl = document.getElementById('adminEmail');
-            const idEl = document.getElementById('adminId');
-            const deptEl = document.getElementById('adminDepartment');
-            const headerNameEl = document.getElementById('headerAdminName');
-
-            if (nameEl) nameEl.textContent = user.name || 'Unknown';
-            if (emailEl) emailEl.textContent = user.email || 'Unknown';
-            if (deptEl) deptEl.textContent = user.department || 'Not Assigned';
-            if (idEl) idEl.textContent = user.adminId || 'Not Applicable';
-
-            if (headerNameEl) {
-                const displayName = user.name || user.email.split('@')[0] || 'Admin';
-                headerNameEl.textContent = `Welcome, ${displayName}`;
-                console.log('Admin header updated to:', headerNameEl.textContent);
-            }
-        } else {
-            console.error('Failed to load admin profile data.');
-            const headerNameEl = document.getElementById('headerAdminName');
-            if (headerNameEl) {
-                const savedEmail = localStorage.getItem('userEmail');
-                const displayName = savedEmail ? savedEmail.split('@')[0] : 'Admin';
-                headerNameEl.textContent = `Welcome, ${displayName}`;
-            }
+            
+            document.getElementById('adminName').textContent = user.name || 'Admin User';
+            document.getElementById('adminEmail').textContent = user.email || '—';
+            document.getElementById('adminPhone').textContent = user.phone || '—';
+            document.getElementById('adminDepartment').textContent = user.department || 'General Admin';
+            document.getElementById('adminId').textContent = user.adminId || 'ADM-001';
+            
+            const headerName = document.getElementById('headerAdminName');
+            if (headerName) headerName.textContent = user.name || user.email.split('@')[0];
         }
     } catch (error) {
-        console.error('Error fetching admin profile:', error);
+        console.error('Error loading profile:', error);
+    }
+}
+
+// ── ADMIN PROFILE EDITING ──
+
+function toggleAdminEdit(field) {
+    const row = document.getElementById(`row-admin-${field}`);
+    const valueEl = document.getElementById(`admin${field.charAt(0).toUpperCase() + field.slice(1)}`);
+    const inputEl = document.getElementById(`edit-admin-${field}`);
+    
+    if (row.classList.contains('edit-mode')) {
+        row.classList.remove('edit-mode');
+    } else {
+        inputEl.value = valueEl.textContent.trim() === '—' ? '' : valueEl.textContent.trim();
+        row.classList.add('edit-mode');
+        inputEl.focus();
+    }
+}
+
+async function saveAdminField(field) {
+    const inputEl = document.getElementById(`edit-admin-${field}`);
+    const newValue = inputEl.value.trim();
+    if (!newValue) {
+        toggleAdminEdit(field);
+        return;
+    }
+
+    const email = localStorage.getItem('userEmail');
+    // Using current UI values for the other field to maintain existing data
+    const currentName = document.getElementById('adminName').textContent.trim();
+    const currentPhone = document.getElementById('adminPhone').textContent.trim();
+
+    const updateData = {
+        email: email,
+        name: field === 'name' ? newValue : (currentName === 'Admin User' ? '' : currentName),
+        phone: field === 'phone' ? newValue : (currentPhone === '—' ? '' : currentPhone)
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/update-profile`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+
+        if (res.ok) {
+            document.getElementById(`admin${field.charAt(0).toUpperCase() + field.slice(1)}`).textContent = newValue;
+            if (field === 'name') {
+                document.getElementById('headerAdminName').textContent = newValue;
+            }
+            toggleAdminEdit(field);
+            alert('Profile updated successfully!');
+        } else {
+            const err = await res.text();
+            alert(err || 'Update failed');
+        }
+    } catch (err) {
+        alert('Server error saving profile');
+    }
+}
+
+async function updateAdminPassword() {
+    const current = document.getElementById('currentPassword').value.trim();
+    const newPass = document.getElementById('newPassword').value.trim();
+    const confirm = document.getElementById('confirmPassword').value.trim();
+    const msg = document.getElementById('passwordMessage');
+    const btn = document.getElementById('updatePasswordBtn');
+
+    if (newPass !== confirm) {
+        msg.textContent = 'Passwords do not match';
+        msg.className = 'inline-msg error';
+        msg.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/update-password`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: localStorage.getItem('userEmail'),
+                currentPassword: current,
+                newPassword: newPass
+            })
+        });
+        if (res.ok) {
+            msg.textContent = 'Password updated successfully!';
+            msg.className = 'inline-msg success';
+            document.getElementById('updatePasswordForm').reset();
+        } else {
+            const txt = await res.text();
+            msg.textContent = txt || 'Update failed';
+            msg.className = 'inline-msg error';
+        }
+    } catch (e) {
+        msg.textContent = 'Connection error';
+        msg.className = 'inline-msg error';
+    } finally {
+        msg.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
     }
 }
 
@@ -179,64 +227,58 @@ async function loadIssues() {
         const response = await fetch(`${API_BASE}/issues`);
         if (response.ok) {
             allIssues = await response.json();
+            fixIssueUrls(allIssues);
+            updateStats();
             refreshCurrentView();
-        } else {
-            console.error('Failed to load issues');
-            alert('Failed to load issues from the server.');
         }
     } catch (error) {
         console.error('Error loading issues:', error);
-        alert('Error connecting to the server.');
     }
 }
 
-function renderIssuesTable(issues) {
-    const tbody = document.getElementById('issueTable');
-    if (!tbody) return;
+function refreshCurrentView() {
+    if (currentView === 'ACTIVE') showActiveIssues();
+    else if (currentView === 'RESOLVED') showResolvedIssues();
+}
 
+function renderIssuesTable(issues) {
+    const tbody = document.getElementById('issueTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     if (issues.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No issues reported yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;">No issues found in this category.</td></tr>';
         return;
     }
 
     issues.forEach(issue => {
         const tr = document.createElement('tr');
+        
+        const photoUrls = issue.photoUrls || (issue.photoUrl ? [issue.photoUrl] : []);
+        const photoBtn = photoUrls.length > 0 
+            ? `<button class="photo-btn" onclick="openPhotoModal('${photoUrls[0]}')"><i class="fas fa-image"></i> View (${photoUrls.length})</button>`
+            : '<span style="opacity:0.5;font-size:0.75rem;">No Photo</span>';
 
-        let locationHtml = escapeHtml(issue.address) || 'N/A';
-        const destination = (issue.latitude && issue.longitude)
-            ? `${issue.latitude},${issue.longitude}`
-            : (issue.address ? encodeURIComponent(issue.address) : null);
-
-        if (destination) {
-            const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-            locationHtml = `
-                <div style="display: flex; flex-direction: column; gap: 5px;">
-                    <span style="font-weight: 500;">${escapeHtml(issue.address) || 'Address Missing'}</span>
-                    <a href="${mapsUrl}" target="_blank" class="btn-primary" 
-                       style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 0.8rem; padding: 5px 10px; text-decoration: none; border-radius: 4px;">
-                        <i class="fas fa-route"></i> Get Route
-                    </a>
-                </div>
-            `;
-        }
-
-        const dateReported = issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'Unknown';
-
-        const photoUrlsArr = issue.photoUrls || (issue.photoUrl ? [issue.photoUrl] : []);
-        const photoHtml = photoUrlsArr.length > 0
-            ? `<button class="btn-secondary" onclick="viewIssuePhotos(${issue.id})" style="padding: 4px 8px; font-size: 0.8rem;">View Photos (${photoUrlsArr.length})</button>`
-            : '<span style="color: #64748b; font-size: 0.85em;">No Photo</span>';
+        const destination = (issue.latitude && issue.longitude) 
+            ? `${issue.latitude},${issue.longitude}` 
+            : encodeURIComponent(issue.address);
+        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
 
         tr.innerHTML = `
-            <td>#${issue.id}</td>
-            <td>${issue.reporterId || 'N/A'}</td>
-            <td>${dateReported}</td>
-            <td>${escapeHtml(issue.title)}</td>
-            <td>${issue.category}</td>
-            <td>${locationHtml}</td>
-            <td>${photoHtml}</td>
+            <td><span class="table-id">#${issue.id}</span></td>
+            <td>#${issue.reporterId || '—'}</td>
+            <td>${new Date(issue.createdAt).toLocaleDateString()}</td>
+            <td class="issue-title-cell">${escapeHtml(issue.title)}</td>
+            <td><span class="badge ${issue.category.toLowerCase()}">${issue.category}</span></td>
+            <td>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <span title="${escapeHtml(issue.address)}" style="font-size:0.82rem; font-weight:600; color:var(--navy);">${escapeHtml(issue.address.substring(0,25))}...</span>
+                    <a href="${mapsUrl}" target="_blank" class="btn-route">
+                        <i class="fas fa-directions"></i> GET ROUTE
+                    </a>
+                </div>
+            </td>
+            <td>${photoBtn}</td>
             <td>
                 <select class="status-select" id="status-${issue.id}" onchange="togglePhotoUpload(${issue.id})">
                     <option value="NEW" ${issue.status === 'NEW' ? 'selected' : ''}>New</option>
@@ -244,162 +286,86 @@ function renderIssuesTable(issues) {
                     <option value="RESOLVED" ${issue.status === 'RESOLVED' ? 'selected' : ''}>Resolved</option>
                     <option value="REJECTED" ${issue.status === 'REJECTED' ? 'selected' : ''}>Rejected</option>
                 </select>
-                <div id="photo-container-${issue.id}" style="display: ${issue.status === 'RESOLVED' ? 'block' : 'none'}; margin-top: 8px;">
-                     <input type="file" id="photo-${issue.id}" accept="image/*" style="font-size: 11px; width: 100%; max-width: 150px;" />
-                     <div style="font-size: 10px; color: #666; margin-top: 2px;">Resolution Photo</div>
+                <div id="photo-container-${issue.id}" style="display: ${issue.status === 'RESOLVED' ? 'block' : 'none'}; margin-top: 5px;">
+                     <input type="file" id="photo-${issue.id}" accept="image/*" style="font-size: 10px; width: 120px;" />
                 </div>
             </td>
-            <td>
-                ${issue.assignedDepartment || 'Unassigned'}
-            </td>
-            <td>
-                <button class="update-btn" onclick="updateIssueStatus(${issue.id})">Update</button>
-            </td>
+            <td>${issue.assignedDepartment || 'Municipal'}</td>
+            <td><button class="update-btn" onclick="updateIssueStatus(${issue.id})">Update</button></td>
         `;
-
         tbody.appendChild(tr);
     });
 }
 
 async function updateIssueStatus(id) {
-    const select = document.getElementById(`status-${id}`);
-    const newStatus = select.value;
-    const btn = select.closest('tr').querySelector('.update-btn');
-
+    const status = document.getElementById(`status-${id}`).value;
     let resolutionPhotoUrl = null;
 
-    if (newStatus === 'RESOLVED') {
-        const fileInput = document.getElementById(`photo-${id}`);
-        if (fileInput && fileInput.files && fileInput.files[0]) {
-            const file = fileInput.files[0];
-            try {
-                resolutionPhotoUrl = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = error => reject(error);
-                    reader.readAsDataURL(file);
-                });
-            } catch (err) {
-                alert('Failed to read image file');
-                return;
-            }
-        } else {
-            alert('Please select a resolution photo before resolving the issue.');
-            return;
-        }
+    if (status === 'RESOLVED') {
+        const file = document.getElementById(`photo-${id}`).files[0];
+        if (!file) return alert('Photo required for resolution');
+        resolutionPhotoUrl = await new Promise(res => {
+            const rd = new FileReader();
+            rd.onload = () => res(rd.result);
+            rd.readAsDataURL(file);
+        });
     }
 
-    const payload = { status: newStatus };
-    if (resolutionPhotoUrl) {
-        payload.resolutionPhotoUrl = resolutionPhotoUrl;
+    const payload = { status };
+    if (resolutionPhotoUrl) payload.resolutionPhotoUrl = resolutionPhotoUrl;
+    
+    if (status === 'REJECTED') {
+        const reason = prompt('Rejection reason:');
+        if (!reason) return;
+        payload.rejectionReason = reason;
     }
-
-    if (newStatus === 'REJECTED') {
-        const reason = prompt('Please enter the reason for rejecting this issue:');
-        if (reason === null) {
-            return;
-        }
-        if (!reason.trim()) {
-            alert('A rejection reason is required.');
-            return;
-        }
-        payload.rejectionReason = reason.trim();
-    }
-
-    const originalText = btn.textContent;
-    btn.textContent = 'Saving...';
-    btn.disabled = true;
 
     try {
-        const response = await fetch(`${API_BASE}/issues/${id}/status`, {
+        const res = await fetch(`${API_BASE}/issues/${id}/status`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-
         });
-
-        if (response.ok) {
-            alert(`Issue #${id} updated to ${newStatus}`);
-            loadIssues(); // Refresh data
-        } else {
-            const text = await response.text();
-            alert(`Failed to update status: ${text}`);
+        if (res.ok) {
+            alert('Issue updated!');
+            loadIssues();
         }
-    } catch (error) {
-        console.error('Error updating status:', error);
-        alert('Error updating status. Please check connection.');
-    } finally {
-        btn.textContent = originalText;
-        btn.disabled = false;
-    }
+    } catch (e) { alert('Update failed'); }
 }
 
-function escapeHtml(text) {
-    if (!text) return '';
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+function openPhotoModal(url) {
+    document.getElementById('photoModalImg').src = url;
+    document.getElementById('photoModal').style.display = 'flex';
+}
+function closePhotoModal() {
+    document.getElementById('photoModal').style.display = 'none';
 }
 
 function togglePhotoUpload(id) {
-    const select = document.getElementById(`status-${id}`);
-    const container = document.getElementById(`photo-container-${id}`);
-    if (select.value === 'RESOLVED') {
-        container.style.display = 'block';
-    } else {
-        container.style.display = 'none';
-        const fileInput = document.getElementById(`photo-${id}`);
-        if (fileInput) fileInput.value = '';
-    }
+    const val = document.getElementById(`status-${id}`).value;
+    document.getElementById(`photo-container-${id}`).style.display = (val === 'RESOLVED' ? 'block' : 'none');
 }
 
-window.viewIssuePhotos = function (id) {
-    const issue = allIssues.find(i => i.id === id);
-    if (!issue) return;
+function filterTable() {
+    const cat = document.getElementById('filterCategory').value;
+    const stat = document.getElementById('filterStatus').value;
+    const dept = document.getElementById('filterDept').value;
     
-    const photos = issue.photoUrls || (issue.photoUrl ? [issue.photoUrl] : []);
-    if (photos.length === 0) {
-        alert("No photos available for this issue.");
-        return;
-    }
-    
-    const w = window.open("");
-    let html = `
-        <head><title>Issue #${id} Photos</title></head>
-        <body style="margin:0; background:#f1f5f9; font-family: system-ui, -apple-system, sans-serif; padding: 30px;">
-            <div style="max-width: 1000px; margin: 0 auto;">
-                <h2 style="text-align:center; color: #1e293b; margin-bottom: 30px;">Issue #${id}: Evidence Photos (${photos.length})</h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
-    `;
-    
-    photos.forEach((url, index) => {
-        html += `
-            <div style="background:white; padding:15px; border-radius:12px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">
-                <a href="${url}" target="_blank">
-                    <img src="${url}" style="width: 100%; height: 250px; display: block; border-radius:8px; object-fit: cover; cursor: zoom-in;">
-                </a>
-                <p style="text-align:center; margin-top:12px; color:#475569; font-weight: 500;">Photo ${index + 1}</p>
-            </div>
-        `;
-    });
-    
-    html += `
-                </div>
-                <div style="text-align:center; margin-top:40px;">
-                    <button onclick="window.close()" style="background:#1e293b; color:white; border:none; padding:10px 25px; border-radius:8px; cursor:pointer; font-weight:600;">Close Gallery</button>
-                </div>
-            </div>
-        </body>
-    `;
-    w.document.write(html);
-};
+    let filtered = allIssues;
 
-window.viewPhoto = function (url) {
-    const w = window.open("");
-    w.document.write(`<img src="${url}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: contain;">`);
-};
+    if (currentView === 'ACTIVE') filtered = filtered.filter(i => i.status === 'NEW' || i.status === 'IN_PROGRESS');
+    else if (currentView === 'RESOLVED') filtered = filtered.filter(i => i.status === 'RESOLVED' || i.status === 'REJECTED');
+
+    if (cat) filtered = filtered.filter(i => i.category === cat);
+    if (stat) filtered = filtered.filter(i => i.status === stat);
+    if (dept) filtered = filtered.filter(i => i.assignedDepartment === dept);
+
+    renderIssuesTable(filtered);
+}
+
+function escapeHtml(t) { return t ? t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+
+function logout() {
+    localStorage.clear();
+    window.location.href = 'login.html';
+}

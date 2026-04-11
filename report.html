@@ -1,108 +1,180 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Report Issue - CrowdCivics</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Issue – CrowdCivics</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="report.css">
 </head>
-
 <body>
 
-    <nav class="dashboard-header">
-        <div style="font-weight: 700; font-size: 1.5rem; color: white;">CrowdCivics</div>
-        <nav class="header-nav" style="display: flex; gap: 1rem; align-items: center;">
-            <a href="dashboard.html" class="nav-link">Dashboard</a>
-            <a href="profile.html" class="nav-link">Profile</a>
-            <a href="#" class="nav-link btn-secondary" id="logoutBtn" style="padding: 0.5rem 1rem;">Logout</a>
-        </nav>
-    </nav>
+  <!-- ── NAVBAR ── -->
+  <nav class="dash-nav">
+    <div class="dash-nav-left">
+      <a href="index.html" class="dash-brand">
+        <span class="dash-brand-dot"></span>CrowdCivics
+      </a>
+      <div class="dash-greeting">Hi, <strong id="userNameHeader">Citizen</strong> 👋</div>
+    </div>
+    <div class="dash-nav-right">
+      <div class="notif-wrap">
+        <button class="notif-btn" id="notifBell">
+          <i class="far fa-bell"></i>
+          <div class="notif-badge" id="notifBadge" style="display:none;">0</div>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-head">
+            <span>Notifications</span>
+            <button class="notif-clear" id="notifClear">Clear All</button>
+          </div>
+          <div class="notif-list" id="notificationList">
+            <div class="notif-empty">No new notifications</div>
+          </div>
+        </div>
+      </div>
+      <a href="dashboard.html" class="dash-nav-link"><i class="fas fa-home"></i> Dashboard</a>
+      <a href="profile.html" class="dash-nav-link"><i class="fas fa-user"></i> Profile</a>
+      <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </nav>
 
-    <div class="container"
-        style="flex-direction: column; justify-content: flex-start; align-items: center; padding: 20px; max-width: 100%; min-height: 100vh; width: 100%; box-sizing: border-box;">
-        <h2 style="font-size: 2.2rem; margin-bottom: 10px; text-align: center; color: var(--accent-color);">Report
-            an Issue</h2>
-        <p class="subtitle" style="text-align: center; font-size: 1.1rem; margin-bottom: 30px;">Help us improve your
-            city by reporting problems.</p>
+  <!-- ── PAGE HEADER ── -->
+  <div class="report-page-header">
+    <div class="report-header-inner">
+      <h1>Report a Civic Issue</h1>
+      <p>Help improve your city by submitting problems you encounter. Every report matters.</p>
+    </div>
+  </div>
 
-        <form id="reportForm" onsubmit="event.preventDefault();" style="width: 100%;">
-            <div class="form-group">
-                <label for="title">Issue Title</label>
-                <input type="text" id="title" name="title" placeholder="e.g. Pothole on Main St" required>
-            </div>
+  <!-- ── LAYOUT ── -->
+  <div class="report-layout">
 
-            <div class="form-group">
-                <label for="category">Category</label>
-                <select id="category" name="category" required>
-                    <option value="" disabled selected>Select a category</option>
-                    <option value="POTHOLE">Pothole / Road Damage</option>
-                    <option value="STREETLIGHT">Broken Streetlight</option>
-                    <option value="GARBAGE">Garbage / Sanitation</option>
-                    <option value="WATER">Water Leak / Pipe Issue</option>
-                    <option value="OTHER">Other</option>
-                </select>
-            </div>
+    <!-- Form card -->
+    <div class="report-form-card">
 
-            <div class="form-group" id="otherCategoryGroup" style="display: none;">
-                <label for="otherCategory">Please Specify Category</label>
-                <input type="text" id="otherCategory" name="otherCategory" placeholder="Enter custom category">
-            </div>
+      <!-- Section: Basic Info -->
+      <div class="form-section-head"><i class="fas fa-info-circle"></i> Basic Information</div>
 
-            <div class="form-group">
-                <label for="address">Location / Address</label>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <input type="text" id="address" name="address"
-                        placeholder="Detected address will appear here or enter manually"
-                        style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    <button type="button" id="getLocationBtn" class="btn-secondary"
-                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        📍 Get My Location
-                    </button>
-                </div>
-                <div id="locationInfo" class="location-info">
-                    <span>Detected Location:</span> <span id="coords"></span>
-                </div>
-                <input type="hidden" id="latitude" name="latitude">
-                <input type="hidden" id="longitude" name="longitude">
-            </div>
+      <div class="form-field">
+        <label for="title">Issue Title <span class="required">*</span></label>
+        <input type="text" id="title" name="title" placeholder="e.g. Deep pothole on Main Street causing damage" required>
+      </div>
 
-            <div class="form-group">
-                <label>Photo Evidence (Up to 5 photos)</label>
+      <!-- Category picker -->
+      <div class="form-field">
+        <label>Category <span class="required">*</span></label>
+        <div class="cat-picker">
+          <div class="cat-option" data-value="POTHOLE" onclick="selectCat(this)">
+            <i class="fas fa-road" style="color:#d97706;"></i><span>Pothole / Road</span>
+          </div>
+          <div class="cat-option" data-value="STREETLIGHT" onclick="selectCat(this)">
+            <i class="fas fa-lightbulb" style="color:#ca8a04;"></i><span>Streetlight</span>
+          </div>
+          <div class="cat-option" data-value="GARBAGE" onclick="selectCat(this)">
+            <i class="fas fa-trash" style="color:#059669;"></i><span>Garbage</span>
+          </div>
+          <div class="cat-option" data-value="WATER" onclick="selectCat(this)">
+            <i class="fas fa-tint" style="color:#0284c7;"></i><span>Water / Pipe</span>
+          </div>
+          <div class="cat-option" data-value="PARKS" onclick="selectCat(this)">
+            <i class="fas fa-tree" style="color:#16a34a;"></i><span>Parks / Trees</span>
+          </div>
+          <div class="cat-option" data-value="OTHER" onclick="selectCat(this)">
+            <i class="fas fa-ellipsis-h" style="color:var(--slate);"></i><span>Other</span>
+          </div>
+        </div>
+        <input type="hidden" id="category" name="category" required>
+      </div>
 
-                <div class="upload-area" id="dropZone" style="cursor: pointer; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 30px; text-align: center; transition: all 0.3s ease; background: #f8fafc;">
-                    <p style="margin: 0; color: #64748b; font-size: 1.1rem;">📸 Click to take photos or upload multiple</p>
-                    <input type="file" id="fileInput" accept="image/*" capture="environment" multiple style="display: none;">
-                </div>
+      <!-- Other category text -->
+      <div class="form-field" id="otherCategoryGroup" style="display:none;">
+        <label for="otherCategory">Please Specify Category</label>
+        <input type="text" id="otherCategory" name="otherCategory" placeholder="Enter custom category">
+      </div>
 
-                <div id="photoPreviewContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-top: 20px;">
-                    <!-- Previews will be dynamically added here -->
-                </div>
+      <!-- Section: Location -->
+      <div class="form-section-head"><i class="fas fa-map-marker-alt"></i> Location</div>
 
-                <input type="hidden" id="photoData">
-            </div>
+      <div class="form-field">
+        <label for="address">Address / Location <span class="required">*</span></label>
+        <input type="text" id="address" name="address" placeholder="Enter address or use auto-detect">
+        <button type="button" id="getLocationBtn" class="loc-btn" onclick="getLocation()">
+          <i class="fas fa-crosshairs"></i> Auto-Detect My Location
+        </button>
+        <input type="hidden" id="latitude" name="latitude">
+        <input type="hidden" id="longitude" name="longitude">
+      </div>
 
-            <div class="form-group">
-                <label for="description">Description & Details</label>
-                <textarea id="description" name="description" rows="4"
-                    style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit;"
-                    placeholder="Describe the issue in detail..."></textarea>
-            </div>
+      <!-- Section: Photos -->
+      <div class="form-section-head"><i class="fas fa-camera"></i> Photo Evidence</div>
 
-            <button type="submit" class="btn-primary" id="submitBtn">Submit Report</button>
-        </form>
+      <div class="form-field">
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <i class="fas fa-camera-retro"></i>
+          <p>Click to take photos or upload from gallery</p>
+          <span>Up to 5 photos · JPG, PNG supported</span>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handleFiles(this.files)">
+        <div id="photoPreviewContainer" class="photo-preview-grid"></div>
+        <input type="hidden" id="photoData" name="photoData">
+      </div>
 
-        <div id="message" class="message"></div>
+      <!-- Section: Description -->
+
+      <div class="form-field">
+        <label for="description">Details <span class="required">*</span></label>
+        <textarea id="description" name="description" rows="4" placeholder="Describe the issue in detail — severity, duration, any safety hazards..." required></textarea>
+      </div>
+
+      <button type="button" class="submit-report-btn" id="submitBtn" onclick="submitReport()">
+        <i class="fas fa-paper-plane"></i> Submit Report
+      </button>
+
+      <div id="message" class="page-message" style="display:none;"></div>
     </div>
 
-        <div id="message" class="message"></div>
-    </div>
+    <!-- Tips sidebar -->
+    <aside class="report-sidebar">
+      <div class="tip-card">
+        <div class="tip-card-head">
+          <div class="tip-icon gold"><i class="fas fa-lightbulb"></i></div>
+          <h4>Tips for a Good Report</h4>
+        </div>
+        <ul class="tip-list">
+          <li><i class="fas fa-check-circle"></i><span>Take clear, well-lit photos of the issue</span></li>
+          <li><i class="fas fa-check-circle"></i><span>Enable GPS for accurate location detection</span></li>
+          <li><i class="fas fa-check-circle"></i><span>Describe severity and any safety risks clearly</span></li>
+          <li><i class="fas fa-check-circle"></i><span>Include nearby landmarks in your description</span></li>
+          <li><i class="fas fa-check-circle"></i><span>Check if the issue is already reported nearby</span></li>
+        </ul>
+      </div>
 
+      <div class="tip-card">
+        <div class="tip-card-head">
+          <div class="tip-icon sky"><i class="fas fa-clock"></i></div>
+          <h4>What Happens Next?</h4>
+        </div>
+        <ul class="tip-list">
+          <li><i class="fas fa-arrow-right" style="color:var(--sky);"></i><span>Your report is reviewed within 24 hours</span></li>
+          <li><i class="fas fa-arrow-right" style="color:var(--sky);"></i><span>Assigned to the appropriate department</span></li>
+          <li><i class="fas fa-arrow-right" style="color:var(--sky);"></i><span>You receive status update notifications</span></li>
+          <li><i class="fas fa-arrow-right" style="color:var(--sky);"></i><span>Average resolution time: 3–7 working days</span></li>
+        </ul>
+      </div>
 
-    <script src="main.js"></script>
-    <script>
-    </script>
+      <div class="tip-card tip-card-dark">
+        <h4 style="color:#fff;margin-bottom:8px;">Need Help?</h4>
+        <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;line-height:1.65;margin:0;">Contact our support team at<br><strong style="color:var(--gold);">support@crowdcivics.com</strong></p>
+      </div>
+    </aside>
+
+  </div>
+
+  <script src="main.js"></script>
 </body>
-
 </html>
