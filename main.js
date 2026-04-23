@@ -313,18 +313,29 @@ function renderIssueList(issues) {
         list.innerHTML = `<div class="empty-state"><p>No reports yet. <a href="report.html">Report one!</a></p></div>`;
         return;
     }
+
+    // Sort by date descending
+    issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     const catIcon = c => ({ ROADS:'fa-road', WATER:'fa-tint', STREETLIGHT:'fa-lightbulb', GARBAGE:'fa-trash' }[c] || 'fa-info-circle');
     const statusClass = s => ({ NEW:'pending', IN_PROGRESS:'progress', RESOLVED:'resolved', REJECTED:'rejected' }[s] || 'pending');
 
+    const lastId = sessionStorage.getItem('lastReportedId');
+
     list.innerHTML = issues.slice(0, 6).map(issue => {
         const photo = (issue.photoUrls && issue.photoUrls.length > 0) ? issue.photoUrls[0] : issue.photoUrl;
+        const isNew = String(issue.id) === lastId;
+
         return `
-        <div class="issue-row" onclick="openIssueModal(${issue.id})" style="cursor:pointer;">
+        <div class="issue-row ${isNew ? 'newly-reported' : ''}" onclick="openIssueModal(${issue.id})" style="cursor:pointer;">
             <div class="issue-row-icon">
                 ${photo ? `<img src="${photo}" class="issue-row-thumb">` : `<i class="fas ${catIcon(issue.category)}"></i>`}
             </div>
             <div class="issue-row-main">
-                <div class="issue-row-title">${issue.title || 'Untitled'}</div>
+                <div class="issue-row-title">
+                    ${issue.title || 'Untitled'}
+                    ${isNew ? '<span class="new-tag">JUST REPORTED</span>' : ''}
+                </div>
                 <div class="issue-row-meta">${issue.address || 'Unknown Location'} · ${new Date(issue.createdAt).toLocaleDateString()}</div>
             </div>
             <div class="issue-row-action">
@@ -462,6 +473,45 @@ async function openIssueModal(id) {
             </div>
         ` : '';
 
+        // Feedback Logic
+        let feedbackHtml = '';
+        if (issue.status === 'RESOLVED') {
+            if (issue.rating) {
+                // Show already submitted feedback
+                feedbackHtml = `
+                    <div class="user-feedback-display">
+                        <div class="feedback-title"><i class="fas fa-star"></i> Your Feedback</div>
+                        <div class="user-feedback-stars">
+                            ${Array(5).fill(0).map((_, i) => `<i class="${i < issue.rating ? 'fas' : 'far'} fa-star"></i>`).join('')}
+                        </div>
+                        <p style="margin-top:10px; font-style:italic;">"${issue.feedback || 'No comment provided.'}"</p>
+                    </div>
+                `;
+            } else {
+                // Show feedback form
+                feedbackHtml = `
+                    <div class="feedback-section" id="feedbackFormSection">
+                        <div class="feedback-title"><i class="fas fa-comment-alt"></i> Rate Service & Give Feedback</div>
+                        <p style="font-size:0.95rem; color:var(--dash-slate); margin-bottom:15px;">How was your experience with this resolution?</p>
+                        
+                        <div class="star-rating" id="starRating">
+                            <i class="far fa-star" data-value="1" onclick="handleStarClick(1)"></i>
+                            <i class="far fa-star" data-value="2" onclick="handleStarClick(2)"></i>
+                            <i class="far fa-star" data-value="3" onclick="handleStarClick(3)"></i>
+                            <i class="far fa-star" data-value="4" onclick="handleStarClick(4)"></i>
+                            <i class="far fa-star" data-value="5" onclick="handleStarClick(5)"></i>
+                        </div>
+                        
+                        <textarea id="feedbackText" class="feedback-textarea" placeholder="Share your thoughts on the resolution... (Optional)"></textarea>
+                        
+                        <button class="feedback-submit-btn" id="submitFeedbackBtn" onclick="submitFeedback(${issue.id})">
+                            <i class="fas fa-paper-plane"></i> Submit Feedback
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
         body.innerHTML = `
             <div class="modal-photo-gallery">${photos}</div>
             <div style="margin-bottom:20px;">
@@ -470,6 +520,7 @@ async function openIssueModal(id) {
             </div>
             <p>${issue.description || 'No description provided for this report.'}</p>
             ${resolutionHtml}
+            ${feedbackHtml}
             <div class="modal-meta">
                 <div><i class="fas fa-map-marker-alt"></i> ${issue.address || 'Location Hidden'}</div>
                 <div style="margin-top:8px;"><i class="fas fa-clock"></i> Reported on ${new Date(issue.createdAt).toLocaleString()}</div>
@@ -478,6 +529,64 @@ async function openIssueModal(id) {
     } catch (err) { 
         console.error("Error fetching issue details:", err);
         body.innerHTML = '<div style="text-align:center; padding:40px; color:var(--dash-red);"><i class="fas fa-exclamation-triangle fa-2x"></i><p>Error loading details.</p></div>'; 
+    }
+}
+
+let selectedRating = 0;
+
+function handleStarClick(rating) {
+    selectedRating = rating;
+    const stars = document.querySelectorAll('#starRating i');
+    stars.forEach((s, i) => {
+        if (i < rating) {
+            s.classList.remove('far');
+            s.classList.add('fas', 'selected');
+        } else {
+            s.classList.remove('fas', 'selected');
+            s.classList.add('far');
+        }
+    });
+}
+
+async function submitFeedback(issueId) {
+    if (selectedRating === 0) {
+        alert("Please select a star rating.");
+        return;
+    }
+
+    const feedbackText = document.getElementById('feedbackText').value.trim();
+    const btn = document.getElementById('submitFeedbackBtn');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+    try {
+        const res = await fetch(`${API_BASE}/issues/${issueId}/feedback`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                rating: selectedRating,
+                feedback: feedbackText
+            })
+        });
+
+        if (res.ok) {
+            const section = document.getElementById('feedbackFormSection');
+            section.innerHTML = `<div style="text-align:center; padding:20px; color:var(--dash-green); font-weight:700;">
+                <i class="fas fa-check-circle fa-2x" style="margin-bottom:10px;"></i>
+                <p>Thank you for your feedback!</p>
+            </div>`;
+            // Optional: refresh the list to update the issue object in memory if needed
+            // But usually we just want to show success in modal
+        } else {
+            alert("Failed to submit feedback. Please try again.");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Feedback';
+        }
+    } catch (err) {
+        alert("Server error. Please try again later.");
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Feedback';
     }
 }
 
@@ -629,6 +738,10 @@ async function submitReport() {
             body: JSON.stringify(payload)
         });
         if (res.ok) {
+            const data = await res.json();
+            if (data && data.id) {
+                sessionStorage.setItem('lastReportedId', String(data.id));
+            }
             alert('Report Submitted Successfully!');
             window.location.href = 'dashboard.html';
         } else {
@@ -786,33 +899,120 @@ function updatePreviewUI(obj) {
 
 // ── MISC: CHAT & NOTIFICATIONS ──
 
-function initializeChatBot() {
-    const toggle = document.getElementById('chatToggle');
+// ── NEW UNIFIED ASSISTANT LOGIC ──
+
+function initializeAssistant() {
+    const fab = document.getElementById('chatToggle');
     const win = document.getElementById('chatWindow');
-    if (!toggle || !win) return;
-    toggle.onclick = () => win.style.display = win.style.display === 'none' ? 'flex' : 'none';
+    const close = document.getElementById('chatClose');
     const form = document.getElementById('chatForm');
-    if (form) {
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            const inp = document.getElementById('chatInput');
-            if (!inp.value.trim()) return;
-            const msgs = document.getElementById('chatMessages');
-            const div = document.createElement('div');
-            div.className = 'chat-msg user';
-            div.textContent = inp.value;
-            msgs.appendChild(div);
-            inp.value = '';
-            setTimeout(() => {
-                const bot = document.createElement('div');
-                bot.className = 'chat-msg bot';
-                bot.textContent = "I'm the CrowdCivics assistant. You can report issues via the dashboard and track them in real-time!";
-                msgs.appendChild(bot);
-                msgs.scrollTop = msgs.scrollHeight;
-            }, 800);
+    const input = document.getElementById('chatInput');
+    const messagesContainer = document.getElementById('chatMessages');
+
+    if (!fab || !win) return;
+
+    // Toggle logic
+    fab.onclick = () => {
+        win.classList.add('active');
+        fab.style.opacity = '0';
+        fab.style.pointerEvents = 'none';
+    };
+
+    if (close) {
+        close.onclick = () => {
+            win.classList.remove('active');
+            fab.style.opacity = '1';
+            fab.style.pointerEvents = 'auto';
         };
     }
+
+    // Handle form submission
+    if (form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Add user message
+            addChatMessage(messagesContainer, text, 'user');
+            input.value = '';
+
+            // Bot generic thinking delay
+            setTimeout(async () => {
+                const reply = await getAssistantReply(text);
+                addChatMessage(messagesContainer, reply, 'bot');
+            }, 600);
+        };
+    }
+
+    // Initial message
+    if (messagesContainer && messagesContainer.children.length === 0) {
+        setTimeout(() => {
+            addChatMessage(messagesContainer, "Hi! I'm the CrowdCivics Assistant. How can I help you today?", 'bot');
+        }, 1000);
+    }
 }
+
+function addChatMessage(container, content, sender) {
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${sender}`;
+    bubble.innerHTML = content;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+}
+
+async function getAssistantReply(text) {
+    const query = text.toLowerCase();
+    
+    if (query.includes('status') || query.includes('report') || query.includes('chart') || query.includes('stats')) {
+        return await generateStatsChart();
+    }
+    
+    if (query.includes('hello') || query.includes('hi')) return "Hello! I can help you track your reports or explain how to submit new ones. Try asking for 'my status'!";
+    if (query.includes('help')) return "You can report issues like potholes or broken lights. Just click 'Report' in the navigation bar.";
+    
+    return "I'm not sure about that, but I can show you your current report statistics. Just ask for 'stats'!";
+}
+
+async function generateStatsChart() {
+    let stats = { total: 0, progress: 0, resolved: 0, pending: 0 };
+    const userId = localStorage.getItem('userId');
+    
+    if (userId) {
+        try {
+            const res = await fetch(`${API_BASE}/issues/user/${userId}`);
+            if (res.ok) {
+                const issues = await res.json();
+                stats.total = issues.length;
+                stats.progress = issues.filter(i => i.status === 'IN_PROGRESS').length;
+                stats.resolved = issues.filter(i => i.status === 'RESOLVED').length;
+                stats.pending = issues.filter(i => ['NEW', 'PENDING'].includes(i.status)).length;
+            }
+        } catch (_) {}
+    }
+
+    const getWidth = (val) => stats.total > 0 ? (val / stats.total) * 100 : 0;
+
+    return `
+        <div>Here are your current reporting stats:</div>
+        <div class="chat-mini-chart">
+            <div class="chart-item">
+                <div class="chart-label">In Progress (${stats.progress})</div>
+                <div class="chart-bar-wrap"><div class="chart-bar blue" style="width: ${getWidth(stats.progress)}%"></div></div>
+            </div>
+            <div class="chart-item">
+                <div class="chart-label">Resolved (${stats.resolved})</div>
+                <div class="chart-bar-wrap"><div class="chart-bar green" style="width: ${getWidth(stats.resolved)}%"></div></div>
+            </div>
+            <div class="chart-item">
+                <div class="chart-label">Pending (${stats.pending})</div>
+                <div class="chart-bar-wrap"><div class="chart-bar red" style="width: ${getWidth(stats.pending)}%"></div></div>
+            </div>
+            <div class="chart-val">Total Reports: ${stats.total}</div>
+        </div>
+    `;
+}
+
 
 async function fetchAndDisplayNotifications(userId) {
     const badge = document.getElementById('notifBadge');
@@ -1111,13 +1311,32 @@ async function saveProfileField(field) {
 
 // ── INITIALIZATION ──
 
+
+/* Dashboard Navbar Dropdown */
+function toggleDashMenu() {
+    const menu = document.getElementById('dashMenuDropdown');
+    if (menu) menu.classList.toggle('show');
+}
+
+// Global click-outside listener for Dashboard Menu
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('dashMenuDropdown');
+    const trigger = document.getElementById('dashMenuTrigger');
+    if (menu && menu.classList.contains('show')) {
+        if (!menu.contains(e.target) && !trigger.contains(e.target)) {
+            menu.classList.remove('show');
+        }
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     // Determine page and init
     syncNavbar();
     initModals();
+    fetchUserLocation();
     if (document.getElementById('statsRow')) loadDashboard();
     if (document.getElementById('reportForm') || document.querySelector('.report-form-card')) initReportPage();
-    if (document.getElementById('chatToggle')) initializeChatBot();
+    if (document.getElementById('chatToggle')) initializeAssistant();
     if (document.getElementById('accountSection')) loadProfileData();
     
     // Global Logout

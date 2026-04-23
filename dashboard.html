@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="chat.css">
 </head>
 <body>
 
@@ -18,6 +19,10 @@
         <span class="dash-brand-dot"></span>CrowdCivics
       </a>
       <div class="dash-greeting">Hi, <strong id="userNameHeader">Citizen</strong> 👋</div>
+      <div class="dash-location" id="locationContainer">
+        <i class="fas fa-map-marker-alt"></i>
+        <span id="locationText">Detecting location...</span>
+      </div>
     </div>
     <div class="dash-nav-right">
       <div class="notif-wrap">
@@ -35,9 +40,17 @@
           </div>
         </div>
       </div>
-      <a href="report.html" class="dash-nav-link"><i class="fas fa-plus"></i> Report</a>
-      <a href="profile.html" class="dash-nav-link"><i class="fas fa-user"></i> Profile</a>
-      <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      <div class="dash-nav-menu-wrap">
+        <button class="dash-menu-trigger" id="dashMenuTrigger" onclick="toggleDashMenu()">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+        <div class="dash-menu-dropdown" id="dashMenuDropdown">
+          <a href="report.html"><i class="fas fa-plus"></i> Report Issue</a>
+          <a href="profile.html"><i class="fas fa-user-circle"></i> View Profile</a>
+          <div class="menu-divider"></div>
+          <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+      </div>
     </div>
   </nav>
 
@@ -52,9 +65,6 @@
       <a class="sidebar-link" href="#myReportsSection"><i class="fas fa-list-ul"></i> My Reports</a>
       <a class="sidebar-link" href="#nearYouSection"><i class="fas fa-map"></i> Near You</a>
       
-      <div class="sidebar-section-label" style="margin-top:32px;">ACCOUNT</div>
-      <a class="sidebar-link" href="profile.html"><i class="fas fa-user-circle"></i> Profile</a>
-      <button class="sidebar-link" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
       
       <a href="report.html" class="sidebar-report-btn">
         <i class="fas fa-camera"></i> Report Issue
@@ -63,11 +73,6 @@
 
     <!-- Main content -->
     <main class="dash-main">
-
-      <!-- Location bar -->
-      <div class="location-bar" id="userLocationDisplay">
-        <i class="fas fa-map-marker-alt"></i> <span id="locationText">Fetching location...</span>
-      </div>
 
       <!-- Stats row -->
       <div class="stats-row" id="statsRow">
@@ -120,10 +125,14 @@
           <div class="dash-card" id="nearYouSection">
             <div class="dash-card-header">
               <div class="dash-card-title">Near You</div>
-              <a href="#" class="dash-card-link" id="viewAllNearYou">View All <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i></a>
             </div>
             <div class="dash-card-body" id="nearYouList">
               <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Loading nearby issues...</div>
+            </div>
+            <div class="card-footer-action">
+               <a href="#" class="view-more-btn" id="viewAllNearYou" style="display:none;">
+                 View More <i class="fas fa-chevron-down"></i>
+               </a>
             </div>
           </div>
         </div>
@@ -146,21 +155,20 @@
   </div>
 
   <!-- Chat widget -->
-  <div class="chat-widget">
-    <div class="chat-fab">
-      <button class="chat-fab-btn" id="chatToggle"><i class="fas fa-comment-dots"></i></button>
+  <button id="chatToggle" class="chat-widget-fab" title="Chat with Assistant">
+    <i class="fas fa-comment-dots"></i>
+  </button>
+
+  <div id="chatWindow" class="chat-widget-window">
+    <div class="chat-widget-header">
+      <span>CrowdCivics Assistant</span>
+      <button id="chatClose" class="chat-widget-close">&times;</button>
     </div>
-    <div id="chatWindow" class="chat-window" style="display:none;">
-      <div class="chat-header-bar">
-        <span>CrowdCivics Assistant</span>
-        <button id="chatClose" class="chat-close-btn">&times;</button>
-      </div>
-      <div id="chatMessages" class="chat-messages"></div>
-      <form id="chatForm" class="chat-form-bar">
-        <input id="chatInput" type="text" class="chat-input" placeholder="Ask about issues, status, help..." autocomplete="off">
-        <button type="submit" class="chat-send-btn">Send</button>
-      </form>
-    </div>
+    <div id="chatMessages" class="chat-widget-messages"></div>
+    <form id="chatForm" class="chat-widget-input-bar">
+      <input id="chatInput" type="text" class="chat-widget-input" placeholder="Ask about issues, status, help..." autocomplete="off">
+      <button type="submit" class="chat-widget-send"><i class="fas fa-paper-plane"></i></button>
+    </form>
   </div>
 
   <!-- ── FOOTER ── -->

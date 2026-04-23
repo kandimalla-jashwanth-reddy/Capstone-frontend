@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="chat.css">
 </head>
 <body>
 
@@ -22,7 +23,6 @@
           </svg>
         </div>
         CrowdCivics
-        <div class="admin-badge">Admin</div>
       </div>
       <div class="admin-welcome">Welcome, <strong id="headerAdminName">Admin</strong></div>
     </div>
@@ -33,11 +33,23 @@
       <button class="admin-tab" id="btnResolved" onclick="showResolvedIssues()">
         <i class="fas fa-check-double"></i> Resolved & Rejected
       </button>
-      <button class="admin-tab" id="btnProfile" onclick="toggleAdminProfile()">
-        <i class="fas fa-user-shield"></i> Profile
-      </button>
     </div>
-    <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    <div class="admin-nav-actions">
+      <div class="admin-more-dropdown">
+        <button class="more-trigger" onclick="toggleNavMenu()" id="navMenuBtn">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+        <div class="more-menu" id="navMoreMenu">
+          <button class="menu-item" onclick="toggleAdminProfile(); toggleNavMenu()">
+            <i class="fas fa-user-shield"></i> Profile
+          </button>
+          <div class="menu-divider"></div>
+          <button class="menu-item logout-item" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
+      </div>
+    </div>
   </nav>
 
   <!-- ── ADMIN BODY ── -->
@@ -122,7 +134,6 @@
     </div>
 
     <!-- Issues Table Section -->
-    <div id="issuesSection" class="admin-table-section">
 
       <!-- Filter row -->
       <div class="admin-table-header">
@@ -191,7 +202,6 @@
           </tbody>
         </table>
       </div>
-    </div>
 
   </div>
 
@@ -202,6 +212,75 @@
       <img id="photoModalImg" src="" alt="Issue Photo">
     </div>
   </div>
+
+  <!-- Assistant Chat Widget -->
+  <button id="chatToggle" class="chat-widget-fab" title="Chat with Assistant">
+    <i class="fas fa-comment-dots"></i>
+  </button>
+
+  <div id="chatWindow" class="chat-widget-window">
+    <div class="chat-widget-header">
+      <span>CrowdCivics Assistant</span>
+      <button id="chatClose" class="chat-widget-close">&times;</button>
+    </div>
+    <div id="chatMessages" class="chat-widget-messages"></div>
+    <form id="chatForm" class="chat-widget-input-bar">
+      <input id="chatInput" type="text" class="chat-widget-input" placeholder="Ask about issues, status, help..." autocomplete="off">
+      <button type="submit" class="chat-widget-send"><i class="fas fa-paper-plane"></i></button>
+    </form>
+  </div>
+
+  <!-- ── ADMIN FOOTER ── -->
+  <footer class="admin-footer">
+    <div class="footer-container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="admin-brand" style="margin-bottom: 20px;">
+            <div class="brand-mark"><i class="fas fa-home"></i></div>
+            <span>CrowdCivics</span>
+          </div>
+          <p class="footer-desc">Empowering administrative oversight through transparent reporting and collaborative civic management.</p>
+          <div class="footer-socials">
+            <a href="#"><i class="fab fa-facebook-f"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+            <a href="#"><i class="fab fa-instagram"></i></a>
+            <a href="#"><i class="fab fa-linkedin-in"></i></a>
+          </div>
+        </div>
+        
+        <div class="footer-col">
+          <h4 class="footer-heading">Shortcuts</h4>
+          <ul class="footer-links">
+            <li><a href="#" onclick="showActiveIssues()"><i class="fas fa-list"></i> Active Issues</a></li>
+            <li><a href="#" onclick="showResolvedIssues()"><i class="fas fa-check-double"></i> Resolved</a></li>
+            <li><a href="#" onclick="toggleAdminProfile()"><i class="fas fa-user-shield"></i> Profile</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-col">
+          <h4 class="footer-heading">Resources</h4>
+          <ul class="footer-links">
+            <li><a href="#">Help Center</a></li>
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-col">
+          <h4 class="footer-heading">Contact Support</h4>
+          <ul class="footer-links contact-info">
+            <li><i class="fas fa-envelope"></i> support@crowdcivics.com</li>
+            <li><i class="fas fa-map-marker-alt"></i> Metropolis Civic Plaza, HQ</li>
+            <li><i class="fas fa-phone"></i> +1 (555) 999-0000</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>&copy; 2024 CrowdCivics Admin Portal. All rights reserved. &bull; <a href="#">v1.2.0</a></p>
+      </div>
+    </div>
+  </footer>
 
   <script src="main.js"></script>
   <script src="admin.js"></script>

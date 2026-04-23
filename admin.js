@@ -29,15 +29,12 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function updateActiveBtn(activeId) {
-    const buttons = ['btnActive', 'btnResolved', 'btnProfile'];
+    const buttons = ['btnActive', 'btnResolved'];
     buttons.forEach(id => {
         const btn = document.getElementById(id);
         if (btn) {
-            if (id === activeId) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            if (id === activeId) btn.classList.add('active');
+            else btn.classList.remove('active');
         }
     });
 }
@@ -55,7 +52,7 @@ function updateStats() {
 }
 
 function toggleAdminProfile() {
-    updateActiveBtn('btnProfile');
+    updateActiveBtn(''); // Clear tab selection when in profile view
     const profilePanel = document.getElementById('adminProfilePanel');
     const issuesSection = document.getElementById('issuesSection');
     if (profilePanel) {
@@ -291,7 +288,7 @@ function renderIssuesTable(issues) {
                 </div>
             </td>
             <td>${issue.assignedDepartment || 'Municipal'}</td>
-            <td><button class="update-btn" onclick="updateIssueStatus(${issue.id})">Update</button></td>
+            <td><button class="update-btn" onclick="updateIssueStatus(${issue.id})"><i class="fas fa-sync-alt"></i> &nbsp; Update</button></td>
         `;
         tbody.appendChild(tr);
     });
@@ -369,3 +366,18 @@ function logout() {
     localStorage.clear();
     window.location.href = 'login.html';
 }
+
+/* ── Navbar Menu Toggle ── */
+function toggleNavMenu() {
+    const menu = document.getElementById('navMoreMenu');
+    if (menu) menu.classList.toggle('show');
+}
+
+// Close dropdown if user clicks outside
+document.addEventListener('click', function(event) {
+    const menu = document.getElementById('navMoreMenu');
+    const btn = document.getElementById('navMenuBtn');
+    if (menu && btn && !menu.contains(event.target) && !btn.contains(event.target)) {
+        menu.classList.remove('show');
+    }
+});

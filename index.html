@@ -7,6 +7,7 @@
     <title>CrowdCivics - Modern Civic Engagement</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="chat.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -641,77 +642,33 @@
         </div>
     </footer>
 
-    <button id="assistantToggle" class="assistant-toggle" title="Chat with Assistant">
+    <!-- Assistant Chat Widget -->
+    <button id="chatToggle" class="chat-widget-fab" title="Chat with Assistant">
         <i class="fas fa-comment-dots"></i>
     </button>
 
-    <div id="assistantSidebar" class="assistant-sidebar">
-        <div class="sidebar-header">
+    <div id="chatWindow" class="chat-widget-window">
+        <div class="chat-widget-header">
             <div class="sidebar-title">
                 <i class="fas fa-robot"></i>
                 <span>CrowdCivics Assistant</span>
             </div>
-            <button id="assistantClose" class="sidebar-close">&times;</button>
+            <button id="chatClose" class="chat-widget-close">&times;</button>
         </div>
-
-        <div id="assistantMessages" class="sidebar-chat-content">
-            <div class="msg msg-bot">
-                Hello! I'm your CrowdCivics Assistant. How can I help you today?
-            </div>
-        </div>
-
-        <div class="sidebar-chat-input">
-            <form id="assistantForm" class="chat-form-unified">
-                <input id="assistantInput" type="text" class="chat-input-unified" placeholder="Ask about issues..."
+        <div id="chatMessages" class="chat-widget-messages"></div>
+        <div class="chat-widget-input-bar">
+            <form id="chatForm" class="chat-form-unified">
+                <input id="chatInput" type="text" class="chat-widget-input" placeholder="Ask about issues..."
                     autocomplete="off">
-                <button type="submit" class="chat-send-unified">Send</button>
+                <button type="submit" class="chat-widget-send"><i class="fas fa-paper-plane"></i></button>
             </form>
         </div>
-
-
     </div>
 
     <script src="main.js"></script>
     <script>
-        const assistantToggle = document.getElementById('assistantToggle');
-        const assistantSidebar = document.getElementById('assistantSidebar');
-        const assistantClose = document.getElementById('assistantClose');
-        const assistantForm = document.getElementById('assistantForm');
-        const assistantInput = document.getElementById('assistantInput');
-        const assistantMessages = document.getElementById('assistantMessages');
+        const assistantToggle = null; // Cleaned up
 
-        assistantToggle.addEventListener('click', () => {
-            assistantSidebar.classList.add('active');
-            assistantToggle.style.opacity = '0';
-            assistantToggle.style.pointerEvents = 'none';
-        });
-
-        assistantClose.addEventListener('click', () => {
-            assistantSidebar.classList.remove('active');
-            assistantToggle.style.opacity = '1';
-            assistantToggle.style.pointerEvents = 'auto';
-        });
-
-        assistantForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const text = assistantInput.value.trim();
-            if (!text) return;
-
-            const userMsg = document.createElement('div');
-            userMsg.className = 'msg msg-user';
-            userMsg.textContent = text;
-            assistantMessages.appendChild(userMsg);
-            assistantInput.value = '';
-            assistantMessages.scrollTop = assistantMessages.scrollHeight;
-
-            setTimeout(() => {
-                const botMsg = document.createElement('div');
-                botMsg.className = 'msg msg-bot';
-                botMsg.textContent = window.getBotReply(text);
-                assistantMessages.appendChild(botMsg);
-                assistantMessages.scrollTop = assistantMessages.scrollHeight;
-            }, 600);
-        });
 
         async function fetchLiveStats() {
             try {

@@ -19,6 +19,10 @@
         <span class="dash-brand-dot"></span>CrowdCivics
       </a>
       <div class="dash-greeting">Hi, <strong id="userNameHeader">Citizen</strong> 👋</div>
+      <div class="dash-location" id="locationContainer">
+        <i class="fas fa-map-marker-alt"></i>
+        <span id="locationText">Detecting location...</span>
+      </div>
     </div>
     <div class="dash-nav-right">
       <div class="notif-wrap">
@@ -36,9 +40,18 @@
           </div>
         </div>
       </div>
-      <a href="dashboard.html" class="dash-nav-link"><i class="fas fa-home"></i> Dashboard</a>
-      <a href="report.html" class="dash-nav-link"><i class="fas fa-plus"></i> Report</a>
-      <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      <div class="dash-nav-menu-wrap">
+        <button class="dash-menu-trigger" id="dashMenuTrigger" onclick="toggleDashMenu()">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+        <div class="dash-menu-dropdown" id="dashMenuDropdown">
+          <a href="dashboard.html"><i class="fas fa-house"></i> Dashboard</a>
+          <a href="report.html"><i class="fas fa-plus"></i> Report Issue</a>
+          <a href="profile.html"><i class="fas fa-user-circle"></i> View Profile</a>
+          <div class="menu-divider"></div>
+          <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+      </div>
     </div>
   </nav>
 
