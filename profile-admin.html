@@ -19,10 +19,38 @@
         <span class="dash-brand-dot"></span>CrowdCivics
       </a>
       <div class="dash-greeting">Hi, <strong id="userNameHeader">Administrator</strong> 👋</div>
+      <div class="dash-location" id="locationContainer">
+        <i class="fas fa-map-marker-alt"></i>
+        <span id="locationText">Detecting location...</span>
+      </div>
     </div>
     <div class="dash-nav-right">
-      <a href="admin.html" class="dash-nav-link"><i class="fas fa-tools"></i> Admin Panel</a>
-      <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      <div class="notif-wrap">
+        <button class="notif-btn" id="notifBell">
+          <i class="far fa-bell"></i>
+          <div class="notif-badge" id="notifBadge" style="display:none;">0</div>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-head">
+            <span>Notifications</span>
+            <button class="notif-clear" id="notifClear">Clear All</button>
+          </div>
+          <div class="notif-list" id="notificationList">
+            <div class="notif-empty">No new notifications</div>
+          </div>
+        </div>
+      </div>
+      <div class="dash-nav-menu-wrap">
+        <button class="dash-menu-trigger" id="dashMenuTrigger" onclick="toggleDashMenu()">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+        <div class="dash-menu-dropdown" id="dashMenuDropdown">
+          <a href="admin.html"><i class="fas fa-tools"></i> Admin Panel</a>
+          <a href="profile-admin.html"><i class="fas fa-user-shield"></i> View Profile</a>
+          <div class="menu-divider"></div>
+          <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+      </div>
     </div>
   </nav>
 
@@ -39,7 +67,8 @@
       </div>
 
       <div class="profile-nav-card">
-        <a href="#accountSection" class="profile-nav-link active"><i class="fas fa-user-shield"></i> Account Info</a>
+        <a href="#accountSection" class="profile-nav-link active"><i class="fas fa-user"></i> Account Info</a>
+        <a href="#notifSection"   class="profile-nav-link"><i class="fas fa-bell"></i> Notifications</a>
         <a href="#securitySection" class="profile-nav-link"><i class="fas fa-lock"></i> Security</a>
       </div>
     </aside>
@@ -96,6 +125,43 @@
         <p style="margin:0;">Keep your credentials secure and ensure your contact details are up to date for official communication.</p>
       </div>
 
+      <!-- Notifications -->
+      <div class="profile-card" id="notifSection">
+        <div class="profile-card-head"><h3><i class="fas fa-bell"></i> Notification Preferences</h3></div>
+        <div class="pref-row">
+          <div class="pref-info">
+            <div class="pref-label">Email updates for status changes</div>
+            <div class="pref-desc">Get emailed when an issue moves from pending to resolved</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="prefEmailUpdates" checked><div class="toggle-track"></div></label>
+        </div>
+        <div class="pref-row">
+          <div class="pref-info">
+            <div class="pref-label">SMS alerts for urgent civic alerts</div>
+            <div class="pref-desc">Receive text messages for urgent issues in the area</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="prefSmsAlerts" checked><div class="toggle-track"></div></label>
+        </div>
+        <div class="pref-row">
+          <div class="pref-info">
+            <div class="pref-label">Monthly CrowdCivics newsletter</div>
+            <div class="pref-desc">City updates, tips, and platform announcements</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="prefNewsletter"><div class="toggle-track"></div></label>
+        </div>
+        <div class="pref-row" style="border:none;padding-bottom:0;">
+          <div class="pref-info">
+            <div class="pref-label">Browser push notifications</div>
+            <div class="pref-desc">Real-time alerts directly in your browser</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="prefPush" checked><div class="toggle-track"></div></label>
+        </div>
+        <button class="btn-save" id="savePreferencesBtn" onclick="savePreferences()">
+          <i class="fas fa-save"></i> Save Preferences
+        </button>
+        <div id="prefMessage" class="inline-msg" style="display:none;"></div>
+      </div>
+
       <!-- Security -->
       <div class="profile-card" id="securitySection">
         <div class="profile-card-head"><h3><i class="fas fa-lock"></i> Security — Update Password</h3></div>
@@ -132,23 +198,51 @@
     </main>
   </div>
 
+
+
   <!-- ── FOOTER ── -->
   <footer class="footer">
     <div class="footer-content">
       <div class="footer-brand">
         <div class="logo-text">Crowd<span>Civics</span></div>
         <p style="color: #a0aec0; margin-top: 1rem; line-height: 1.6;">Official Administrator Portal for civic management and citizen collaboration.</p>
+        <div class="social-links" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+          <a href="#" style="color: var(--p1-gold); font-size: 1.2rem;"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" style="color: var(--p1-gold); font-size: 1.2rem;"><i class="fab fa-twitter"></i></a>
+          <a href="#" style="color: var(--p1-gold); font-size: 1.2rem;"><i class="fab fa-instagram"></i></a>
+          <a href="#" style="color: var(--p1-gold); font-size: 1.2rem;"><i class="fab fa-linkedin-in"></i></a>
+        </div>
       </div>
       <div>
         <h3 class="footer-title">Quick Links</h3>
         <ul class="footer-links">
           <li><a href="admin.html">Admin Dashboard</a></li>
-          <li><a href="mailto:support@crowdcivics.com">Internal Support</a></li>
+          <li><a href="profile-admin.html">View Profile</a></li>
+          <li><a href="#" onclick="logout()">Logout</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="footer-title">Resources</h3>
+        <ul class="footer-links">
+          <li><a href="#">Internal Support</a></li>
+          <li><a href="#">Admin Policies</a></li>
+          <li><a href="#">System Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="footer-title">Contact Us</h3>
+        <ul class="footer-links">
+          <li><a href="mailto:support@crowdcivics.com"><i class="fas fa-envelope"
+                style="margin-right: 8px;"></i> support@crowdcivics.com</a></li>
+          <li><a href="#"><i class="fas fa-map-marker-alt" style="margin-right: 8px;"></i> 123 Civic Plaza,
+              Metropolis</a></li>
+          <li><a href="#"><i class="fas fa-phone" style="margin-right: 8px;"></i> +1 (555) 999-0000</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <p>&copy; 2024 CrowdCivics. Official Use Only.</p>
+      <p style="margin-top: 8px;"><a href="#">v1.2.0</a></p>
     </div>
   </footer>
 
